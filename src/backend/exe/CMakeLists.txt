@@ -2,6 +2,13 @@
 set(EXE_NAME chess_server)
 
 # Include ANTLR setup
+# 
+# TODO: use an external dependency manager like vcpkg,
+# so cmake build dir can be deleted without 
+# downloading the ANTLR tool again.
+# But it requires more work: https://shybovycha.github.io/2022/11/07/configscript-parser.html#:~:text=ANTLR%20version%20incompatibility
+# 
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(SetupANTLR)
 

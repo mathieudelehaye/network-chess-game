@@ -9,6 +9,8 @@
 *.jar
 
 bin/
+download/
+.vscode/
 
 # Precompiled Headers
 *.gch
