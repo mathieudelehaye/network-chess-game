@@ -30,10 +30,15 @@ add_executable(${EXE_NAME}
     ${ANTLR_SimpleChessGameParser_CXX_OUTPUTS}
 )
 
-# Include headers
+# Include dependency headers - use SYSTEM to suppress warnings
 target_include_directories(${EXE_NAME} 
-    PRIVATE 
+    SYSTEM PRIVATE 
     "${antlr_SOURCE_DIR}/runtime/Cpp/runtime/src"
+)
+
+# Include other headers
+target_include_directories(${EXE_NAME}
+    PRIVATE
     ${ANTLR_SimpleChessGameParser_OUTPUT_DIR}
 )
 
