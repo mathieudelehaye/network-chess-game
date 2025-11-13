@@ -7,41 +7,12 @@
 
 /**
  * @class PosixTcpTransport
- * @brief Concrete transport implementation using POSIX TCP/IP sockets.
+ * @brief Concrete transport implementation using POSIX TCP/IP sockets
  *
  * This class implements the ITransport interface using a standard
  * POSIX TCP/IP socket. It provides a bidirectional text-based
  * communication channel used by the server to exchange messages with
  * remote clients (console frontend, GUI, etc.).
- *
- * ## Responsibilities
- * - Maintain a connected TCP socket descriptor.
- * - Start a background reading loop.
- * - Notify upper layers when raw text payloads are received.
- * - Deliver outgoing text messages to the connected client.
- * - Handle connection shutdown and cleanup.
- *
- * ## Design
- * The class is part of the transport layer and corresponds to a
- * concrete Strategy in the Strategy pattern. Higher-level components
- * depend only on the abstract ITransport interface. This allows the server
- * to switch transport implementations without modifying the application logic.
- *
- * ## Threading Model
- * A background reader thread is created and cooperatively stopped when the application
- * is exited.
- *
- * The thread:
- * - Continuously read on the socket descriptor.
- * - Converts incoming bytes into messages.
- * - Calls the user-provided ReceiveCallback when data is received.
- * - The write operations are synchronous.
- *
- * ## Lifetime
- * The destructor calls close(), which:
- * - Requests the reading thread to stop.
- * - Shuts down and closes the underlying socket descriptor.
- * This ensures RAII-compliant cleanup.
  */
 class PosixTcpTransport : public ITransport {
    public:

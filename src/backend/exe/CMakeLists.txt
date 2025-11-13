@@ -47,9 +47,10 @@ target_include_directories(${EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${CMAKE_CURRENT_SOURCE_DIR}/models/parser
     ${CMAKE_CURRENT_SOURCE_DIR}/views
-    ${CMAKE_CURRENT_SOURCE_DIR}/transport
-    ${CMAKE_CURRENT_SOURCE_DIR}/transport/session
-    ${CMAKE_CURRENT_SOURCE_DIR}/transport/posix
+    ${CMAKE_CURRENT_SOURCE_DIR}/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/session
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/transport
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/transport/posix
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
 )
 
