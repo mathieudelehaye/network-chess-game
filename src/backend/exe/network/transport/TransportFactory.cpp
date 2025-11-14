@@ -1,6 +1,6 @@
 #include "TransportFactory.hpp"
 
-#include "PosixTcpTransport.hpp"
+#include "TcpTransport.hpp"
 
 std::unique_ptr<ITransport> TransportFactory::create(int fd, NetworkMode network) {
     switch (network) {
@@ -8,6 +8,6 @@ std::unique_ptr<ITransport> TransportFactory::create(int fd, NetworkMode network
 
         case NetworkMode::TCP:
         default:
-            return std::make_unique<PosixTcpTransport>(fd);
+            return std::make_unique<TcpTransport>(fd);
     }
 }

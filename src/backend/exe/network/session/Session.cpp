@@ -11,30 +11,43 @@ Session::~Session() {
 void Session::start() {
     active = true;
 
-    readerThread = std::jthread([this](std::stop_token st) { this->readerLoop(st); });
-
-    transport->start([this](const std::string& msg) { handleMessage(msg); });
+    transport->start([this](const std::string& payload) { onReceive(payload); });
 }
 
-void Session::readerLoop(std::stop_token st) {
-    while (!st.stop_requested() && active.load()) {
-        // The transport layer actually triggers callbacks, but we keep this loop method only to
-        // detect stop_token status.
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+void Session::onReceive(const std::string& raw) {
+    if (!active)
+        return;
+
+    // Accumulate data into buffer
+    buffer += raw;
+    
+    // Process all complete messages (delimited by '\n')
+    while (buffer.find('\n') != std::string::npos) {
+        // Extract one complete message
+        size_t pos = buffer.find('\n');
+        std::string message = buffer.substr(0, pos);
+        buffer.erase(0, pos + 1);
+        
+        // Parse and handle this complete message
+        handleMessage(message);
     }
 }
 
-void Session::handleMessage(const std::string& raw) {
+void Session::handleMessage(const std::string& json_str) {
     if (!active)
         return;
 
     try {
-        // nlohmann::json req = nlohmann::json::parse(raw);
+        // Now we can safely parse - we have a complete message
+        // nlohmann::json req = nlohmann::json::parse(json_str);
+        
+        // Route and respond
         // nlohmann::json resp = router.route(req);
-        // send(resp);
+        // send(resp.dump());
+        
     } catch (const std::exception& e) {
-        // send({{"error", e.what()}});
-        send("error");
+        std::cerr << "Message handling error: " << e.what() << "\n";
+        // send(nlohmann::json{{"error", e.what()}}.dump());
     }
 }
 
@@ -50,6 +63,5 @@ void Session::close() {
     if (!active.exchange(false))
         return;
 
-    readerThread.request_stop();  // jthread cancel
     transport->close();           // shuts down socket
 }

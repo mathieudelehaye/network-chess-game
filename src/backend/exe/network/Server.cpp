@@ -6,15 +6,16 @@
 
 #include <iostream>
 
-Server::Server(NetworkMode mode, const std::string& endpoint, int port) : network(mode) {
+Server::Server(NetworkMode mode, const std::string& ip, int port) : network(mode) {
+    // Create socket based on transport mode
     switch (network) {
         case NetworkMode::IPC:
-            // TODO: implement
+            connectIPC();
             break;
         case NetworkMode::TCP:
         default:
-            server_fd = createTcpSocket(endpoint, port);
-            std::cout << "TCP server listening at " << endpoint << ":" << port << "\n";
+            // Select TCP by default
+            connectTCP(ip, port);
             break;
     }
 }
@@ -60,9 +61,9 @@ void Server::acceptLoop(std::stop_token st) {
     }
 }
 
-int Server::createTcpSocket(const std::string& ip, int port) {
-    int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0)
+void Server::connectTCP(const std::string& ip, int port) {
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0)
         throw std::runtime_error("Cannot create TCP socket");
 
     sockaddr_in addr{};
@@ -72,15 +73,15 @@ int Server::createTcpSocket(const std::string& ip, int port) {
     if (inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) <= 0)
         throw std::runtime_error("Invalid IP address");
 
-    if (bind(fd, (sockaddr*)&addr, sizeof(addr)) < 0)
+    if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) < 0)
         throw std::runtime_error("TCP bind failed");
 
-    if (listen(fd, 10) < 0)
+    if (listen(server_fd, 10) < 0)
         throw std::runtime_error("TCP listen failed");
 
-    return fd;
+    std::cout << "TCP server listening at " << ip << ":" << port << "\n";
 }
 
-int Server::createIpc(const std::string& path) {
-    // TODO: implement
+void Server::connectIPC() {
+    // TODO: implement    
 }

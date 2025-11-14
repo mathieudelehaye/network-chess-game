@@ -12,7 +12,7 @@
 
 class Server {
    public:
-    Server(NetworkMode mode, const std::string& endpoint, int port);
+    Server(NetworkMode mode, const std::string& ip, int port);
 
     void start();
     void stop();
@@ -20,11 +20,11 @@ class Server {
    private:
     void acceptLoop(std::stop_token st);
 
-    int createTcpSocket(const std::string& ip, int port);
-    int createIpc(const std::string& path);
-
    private:
     int server_fd = -1;
+
+    void connectTCP(const std::string& ip, int port);
+    void connectIPC();
 
     NetworkMode network;
 

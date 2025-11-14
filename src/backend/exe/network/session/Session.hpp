@@ -1,10 +1,10 @@
 #pragma once
+
 #include <atomic>
 #include <memory>
 // #include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
-
 #include "ITransport.hpp"
 
 /**
@@ -25,14 +25,11 @@ class Session {
     void close();                       ///< Shutdown transport + thread
 
    private:
-    void readerLoop(std::stop_token st);  ///< Thread callback
-    void handleMessage(const std::string& raw);
-
-   private:
     std::unique_ptr<ITransport> transport;
-
-    std::jthread readerThread;  ///< Background receive loop
     std::atomic<bool> active{false};
+    
+    std::string buffer;           // Buffer to acumulate message fragments
 
-    // MessageRouter router;                  ///< Dispatch JSON → controllers
+    void onReceive(const std::string& raw);
+    void handleMessage(const std::string& json_str);    /// Useful to prevent processing messages in callback functions during shutdown
 };

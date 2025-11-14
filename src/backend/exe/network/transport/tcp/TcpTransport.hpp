@@ -6,7 +6,7 @@
 #include "ITransport.hpp"
 
 /**
- * @class PosixTcpTransport
+ * @class TcpTransport
  * @brief Concrete transport implementation using POSIX TCP/IP sockets
  *
  * This class implements the ITransport interface using a standard
@@ -14,19 +14,19 @@
  * communication channel used by the server to exchange messages with
  * remote clients (console frontend, GUI, etc.).
  */
-class PosixTcpTransport : public ITransport {
+class TcpTransport : public ITransport {
    public:
     /**
      * @brief Construct a transport from an already-accepted socket descriptor.
      *
      * @param socket_fd File descriptor representing an open TCP connection.
      */
-    PosixTcpTransport(int socket_fd);
+    TcpTransport(int socket_fd);
 
     /**
      * @brief Destructor closes the socket and stops background threads.
      */
-    ~PosixTcpTransport();
+    ~TcpTransport();
 
     /**
      * @brief Starts the asynchronous reading loop.
