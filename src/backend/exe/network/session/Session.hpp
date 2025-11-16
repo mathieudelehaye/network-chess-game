@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "ITransport.hpp"
+#include "MessageRouter.hpp"
 
 /**
  * @brief Represents a single connected client session.
@@ -26,12 +27,14 @@ class Session {
     void close();                       ///< Shutdown transport + thread
 
    private:
+    void onReceive(
+        const std::string& raw);  /// Wait until complete application message is received.
+    void handleMessage(const std::string& json_str);  /// Check for application message syntax
+                                                      /// before passing it to the controller layer.
+
+    std::string buffer;  /// Buffer to acumulate message fragments
+    std::atomic<bool> active{
+        false};  /// Useful to avoid passing messages in callback functions during shutdown.
     std::unique_ptr<ITransport> transport;
-    std::atomic<bool> active{false};
-
-    std::string buffer;  // Buffer to acumulate message fragments
-
-    void onReceive(const std::string& raw);
-    void handleMessage(const std::string& json_str);  /// Useful to prevent processing messages in
-                                                      /// callback functions during shutdown
+    std::unique_ptr<MessageRouter> router;
 };

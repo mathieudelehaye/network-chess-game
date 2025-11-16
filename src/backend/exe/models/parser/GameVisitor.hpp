@@ -16,5 +16,6 @@ class GameVisitor : public SimpleChessGameBaseVisitor {
 
    public:
     std::any visitStrike(SimpleChessGameParser::StrikeContext *ctx) override;
+
     const std::vector<std::pair<std::string, std::string>> getMoves() const { return moves; };
 };

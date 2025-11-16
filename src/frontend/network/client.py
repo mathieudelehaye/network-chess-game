@@ -90,6 +90,8 @@ class Client:
 
     def send_message(self, message) -> bool:
         """Send message through session"""
-        if self.session:
-            return self.session.send_message(message)
-        return False
+        if not self.session:
+            self._logger.error("Not connected to server")
+            return False
+
+        return self.session.send_message(message)

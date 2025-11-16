@@ -6,7 +6,7 @@ sudo update-alternatives --config java  # select which version of Java to use if
 java -version                           # check the installed selected version.
 ```
 
-- Install doxygen and graphviz at system level:
+- Install doxygen and graphviz at system level (not available in vcpkg):
 ```
 sudo apt update
 sudo apt install doxygen graphviz
@@ -17,7 +17,7 @@ sudo apt install doxygen graphviz
 cd ~
 git clone https://github.com/microsoft/vcpkg.git
 ./vcpkg/bootstrap-vcpkg.sh
-./vcpkg/vcpkg install spdlog
+./vcpkg/vcpkg install spdlog nlohmann-json
 ```
 
 - To build and run the backend server:

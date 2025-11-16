@@ -1,5 +1,5 @@
+import json
 import threading
-from typing import Callable, Optional
 from network.transport.transport_interface import ITransport
 
 # from utils.json_parser import Message
@@ -77,31 +77,47 @@ class ClientSession:
             return
 
         try:
-            pass
-            # Parse JSON message
-            # message = Message.from_json(json_str)
+            # Parse JSON response (fixed: was 'data', should be 'json_str')
+            response = json.loads(json_str.strip())
 
-            # Dispatch to handler
-            # if message and self._message_handler:
-            #     self._message_handler(message)
+            # Handle different response types
+            if "error" in response:
+                self._logger.error(f"Server error: {response['error']}")
+                if "expected" in response:
+                    self._logger.info(f"Expected format: {response['expected']}")
 
-        except Exception as e:
-            self._logger.error(f"Message handling error: {e}")
+            elif "message" in response:
+                self._logger.info(f"Server: {response['message']}")
+
+                # If there's structured move data, show it
+                if "move" in response:
+                    move = response["move"]
+                    self._logger.debug(f"Move details: {move['from']} → {move['to']}")
+
+            else:
+                self._logger.info(f"Server response: {response}")
+
+        except json.JSONDecodeError as e:
+            self._logger.error(f"Invalid JSON from server: {e}")
+            self._logger.debug(f"Raw data: {json_str}")
 
     # def send_message(self, message: Message) -> bool:
-    def send_message(self, message: str) -> bool:
+    def send_message(self, message: dict) -> bool:
         """
         Send a JSON message.
 
-        @param message The message to send
+        @param message Dictionary to send as JSON
         @return True if sent successfully
         """
         if not self._active:
+            self._logger.warning("Cannot send - session not active")
             return False
 
         try:
-            json_str = message.to_json() + "\n"
+            # Convert dict to JSON string (fixed: was message.to_json())
+            json_str = json.dumps(message) + "\n"
             self.transport.send(json_str)
+            self._logger.debug(f"Sent: {json_str.strip()}")
             return True
         except Exception as e:
             self._logger.error(f"Failed to send message: {e}")

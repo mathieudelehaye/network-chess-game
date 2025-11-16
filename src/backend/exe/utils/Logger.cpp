@@ -50,12 +50,16 @@ Logger& Logger::instance() {
     return instance;
 }
 
+void Logger::info(const std::string& message) {
+    logger_->info(message);
+}
+
 void Logger::debug(const std::string& message) {
     logger_->debug(message);
 }
 
-void Logger::info(const std::string& message) {
-    logger_->info(message);
+void Logger::trace(const std::string& message) {
+    logger_->trace(message);
 }
 
 void Logger::warning(const std::string& message) {

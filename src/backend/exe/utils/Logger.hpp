@@ -21,16 +21,22 @@ class Logger {
     static Logger& instance();
 
     /**
+     * @brief Log info message
+     * @param message The message to log
+     */
+    void info(const std::string& message);
+
+    /**
      * @brief Log debug message
      * @param message The message to log
      */
     void debug(const std::string& message);
 
     /**
-     * @brief Log info message
+     * @brief Log trace message
      * @param message The message to log
      */
-    void info(const std::string& message);
+    void trace(const std::string& message);
 
     /**
      * @brief Log warning message

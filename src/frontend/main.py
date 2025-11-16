@@ -1,5 +1,6 @@
-import sys
 import signal
+import sys
+import time
 from network.client import Client
 from network.network_mode import NetworkMode
 from utils.logger import Logger
@@ -24,13 +25,34 @@ def main():
         logger.error("Failed to connect to server")
         return 1
 
-    logger.info("Client connected to server. Press Ctrl+C to disconnect.")
+    logger.info("Client connected to server. Type moves (e.g., 'a2-a4') or 'quit' to exit.")
 
-    # Keep running until user interrupts
+    # Interactive move input loop
     try:
-        input()  # Wait for Enter (like std::cin.get())
+        while True:
+            # Get move from user
+            move_input = input("\nEnter move: ").strip()
+
+            if not move_input:
+                continue
+
+            if move_input.lower() in ["quit", "exit", "q"]:
+                logger.info("Exiting...")
+                break
+
+            # Send move to server
+            move_msg = {"move": move_input}
+            if client.send_message(move_msg):
+                logger.info(f"Sent move: {move_input}")
+                # Give server time to respond
+                time.sleep(0.5)
+            else:
+                logger.error("Failed to send move")
+
     except KeyboardInterrupt:
-        pass
+        logger.info("\nInterrupted by user")
+    except EOFError:
+        logger.info("\nEnd of input")
 
     # Cleanup
     client.disconnect()

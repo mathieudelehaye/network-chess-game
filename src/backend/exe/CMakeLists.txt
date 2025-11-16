@@ -23,8 +23,9 @@ antlr_target(SimpleChessGameParser
     VISITOR
 )
 
-# Find dependency packages
+# Find vcpkg dependency packages
 find_package(spdlog CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # Automatically find source files
 file(GLOB_RECURSE EXE_SOURCES CONFIGURE_DEPENDS
@@ -61,6 +62,7 @@ target_include_directories(${EXE_NAME} PRIVATE
 target_link_libraries(${EXE_NAME} PRIVATE 
     antlr4_shared
     spdlog::spdlog
+    nlohmann_json::nlohmann_json
 )
 
 # Set optimization flags for Release build

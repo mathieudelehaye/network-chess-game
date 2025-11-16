@@ -1,6 +1,12 @@
 #include "Session.hpp"
 
 #include <iostream>
+#include <nlohmann/json.hpp>
+
+#include "Logger.hpp"
+#include "MessageRouter.hpp"
+
+using json = nlohmann::json;
 
 Session::Session(std::unique_ptr<ITransport> t) : transport(std::move(t)) {}
 
@@ -37,17 +43,37 @@ void Session::handleMessage(const std::string& json_str) {
     if (!active)
         return;
 
-    try {
-        // Now we can safely parse - we have a complete message
-        // nlohmann::json req = nlohmann::json::parse(json_str);
+    auto& logger = Logger::instance();
+    logger.trace("Received: " + json_str);
 
-        // Route and respond
-        // nlohmann::json resp = router.route(req);
-        // send(resp.dump());
+    try {
+        // Parse JSON and check its correct syntax
+        json msg = json::parse(json_str);
+
+        // Route to controller
+        std::string response = router->route(msg);
+
+        // Send response back
+        if (!response.empty()) {
+            send(response);
+            logger.trace("Sent response: " + response);
+        }
+
+    } catch (const json::exception& e) {
+        logger.error("Invalid JSON: " + std::string(e.what()));
+
+        json error_response;
+        error_response["error"] = "Invalid JSON format";
+        send(error_response.dump());
 
     } catch (const std::exception& e) {
-        std::cerr << "Message handling error: " << e.what() << "\n";
-        // send(nlohmann::json{{"error", e.what()}}.dump());
+        logger.error("Internal error: " +
+                     std::string(e.what()));  // server logs internal error detail
+
+        json error_response;
+        error_response["error"] =
+            "Internal server error";  // then sends a generic error message to the client
+        send(error_response.dump());
     }
 }
 
