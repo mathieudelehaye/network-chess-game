@@ -20,14 +20,14 @@ void Session::onReceive(const std::string& raw) {
 
     // Accumulate data into buffer
     buffer += raw;
-    
+
     // Process all complete messages (delimited by '\n')
     while (buffer.find('\n') != std::string::npos) {
         // Extract one complete message
         size_t pos = buffer.find('\n');
         std::string message = buffer.substr(0, pos);
         buffer.erase(0, pos + 1);
-        
+
         // Parse and handle this complete message
         handleMessage(message);
     }
@@ -40,11 +40,11 @@ void Session::handleMessage(const std::string& json_str) {
     try {
         // Now we can safely parse - we have a complete message
         // nlohmann::json req = nlohmann::json::parse(json_str);
-        
+
         // Route and respond
         // nlohmann::json resp = router.route(req);
         // send(resp.dump());
-        
+
     } catch (const std::exception& e) {
         std::cerr << "Message handling error: " << e.what() << "\n";
         // send(nlohmann::json{{"error", e.what()}}.dump());
@@ -63,5 +63,5 @@ void Session::close() {
     if (!active.exchange(false))
         return;
 
-    transport->close();           // shuts down socket
+    transport->close();  // shuts down socket
 }

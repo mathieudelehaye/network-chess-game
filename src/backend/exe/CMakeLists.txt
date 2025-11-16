@@ -23,6 +23,9 @@ antlr_target(SimpleChessGameParser
     VISITOR
 )
 
+# Find dependency packages
+find_package(spdlog CONFIG REQUIRED)
+
 # Automatically find source files
 file(GLOB_RECURSE EXE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
@@ -55,9 +58,9 @@ target_include_directories(${EXE_NAME} PRIVATE
 )
 
 # Link libraries
-target_link_libraries(${EXE_NAME} 
-    PRIVATE 
+target_link_libraries(${EXE_NAME} PRIVATE 
     antlr4_shared
+    spdlog::spdlog
 )
 
 # Set optimization flags for Release build

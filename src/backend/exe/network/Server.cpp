@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "utils/Logger.hpp"
+
 Server::Server(NetworkMode mode, const std::string& ip, int port) : network(mode) {
     // Create socket based on transport mode
     switch (network) {
@@ -40,13 +42,15 @@ void Server::stop() {
 }
 
 void Server::acceptLoop(std::stop_token st) {
+    auto& logger = Logger::instance();
+
     while (!st.stop_requested() && running.load()) {
         int client_fd = accept(server_fd, nullptr, nullptr);
 
         if (client_fd < 0)
             continue;  // temporary error, try again
 
-        std::cout << "Client connected" << "\n";
+        logger.debug("Client connected");
 
         // Create a transport
         auto transport = TransportFactory::create(client_fd, network);
@@ -78,10 +82,8 @@ void Server::connectTCP(const std::string& ip, int port) {
 
     if (listen(server_fd, 10) < 0)
         throw std::runtime_error("TCP listen failed");
-
-    std::cout << "TCP server listening at " << ip << ":" << port << "\n";
 }
 
 void Server::connectIPC() {
-    // TODO: implement    
+    // TODO: implement
 }

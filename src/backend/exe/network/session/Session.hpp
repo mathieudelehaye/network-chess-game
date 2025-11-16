@@ -5,6 +5,7 @@
 // #include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
+
 #include "ITransport.hpp"
 
 /**
@@ -27,9 +28,10 @@ class Session {
    private:
     std::unique_ptr<ITransport> transport;
     std::atomic<bool> active{false};
-    
-    std::string buffer;           // Buffer to acumulate message fragments
+
+    std::string buffer;  // Buffer to acumulate message fragments
 
     void onReceive(const std::string& raw);
-    void handleMessage(const std::string& json_str);    /// Useful to prevent processing messages in callback functions during shutdown
+    void handleMessage(const std::string& json_str);  /// Useful to prevent processing messages in
+                                                      /// callback functions during shutdown
 };

@@ -17,7 +17,7 @@ sudo apt install doxygen graphviz
 cd ~
 git clone https://github.com/microsoft/vcpkg.git
 ./vcpkg/bootstrap-vcpkg.sh
-./vcpkg/vcpkg install ...
+./vcpkg/vcpkg install spdlog
 ```
 
 - To build and run the backend server:
