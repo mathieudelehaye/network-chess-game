@@ -1,6 +1,6 @@
-from tcp.tcp_transport import TcpTransport
-from transport_interface import ITransport
-from ..network_mode import NetworkMode
+from network.transport.tcp.tcp_transport import TcpTransport
+from network.transport.transport_interface import ITransport
+from network.network_mode import NetworkMode
 
 class TransportFactory:
     """Factory for creating transports - mirrors C++ TransportFactory"""

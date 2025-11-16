@@ -1,7 +1,7 @@
 import sys
 import signal
 from network.client import Client
-from network import NetworkMode
+from network.network_mode import NetworkMode
 from utils.logger import Logger
 
 

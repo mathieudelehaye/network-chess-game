@@ -1,9 +1,8 @@
 import socket
-import threading
 from typing import Optional
-from network import NetworkMode
-from network.transport_factory import TransportFactory
-from session.client_session import ClientSession
+from network.network_mode import NetworkMode
+from network.transport.transport_factory import TransportFactory
+from network.session.client_session import ClientSession
 from utils.logger import Logger
 
 class Client:
@@ -21,8 +20,9 @@ class Client:
         """Connect to server and create session"""
         try:
             # Create socket based on transport mode
-            if self.mode == NetworkMode.ICP:
-                self.client_fd = self._connect_unix()
+            if self.mode == NetworkMode.IPC:
+                # to implement
+                pass
             else:  # NetworkMode.TCP
                 self.client_fd = self._connect_tcp()
             

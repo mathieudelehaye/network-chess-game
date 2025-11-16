@@ -1,7 +1,7 @@
 import threading
 from typing import Callable, Optional
-from transport.transport_interface import ITransport
-from utils.json_parser import Message
+from network.transport.transport_interface import ITransport
+# from utils.json_parser import Message
 from utils.logger import Logger
 
 
@@ -19,14 +19,15 @@ class ClientSession:
         """
         self.transport = transport
         self._logger = Logger()
-        self._message_handler: Optional[Callable[[Message], None]] = None
+        # self._message_handler: Optional[Callable[[Message], None]] = None
         self._active = False
         
         # Message buffering
         self._buffer = ""
         self._buffer_lock = threading.Lock()
     
-    def start(self, message_handler: Optional[Callable[[Message], None]] = None) -> None:
+    # def start(self, message_handler: Optional[Callable[[Message], None]] = None) -> None:
+    def start(self) -> None:
         """
         Start the session.
         Spawns the transport's receive thread.
@@ -34,7 +35,7 @@ class ClientSession:
         @param message_handler Callback for incoming messages
         """
         self._active = True
-        self._message_handler = message_handler
+        # self._message_handler = message_handler
         
         # Start transport with our receive callback
         self.transport.start(self._on_receive)
@@ -75,17 +76,19 @@ class ClientSession:
             return
         
         try:
+            pass
             # Parse JSON message
-            message = Message.from_json(json_str)
+            # message = Message.from_json(json_str)
             
             # Dispatch to handler
-            if message and self._message_handler:
-                self._message_handler(message)
+            # if message and self._message_handler:
+            #     self._message_handler(message)
                 
         except Exception as e:
             self._logger.error(f"Message handling error: {e}")
     
-    def send_message(self, message: Message) -> bool:
+    # def send_message(self, message: Message) -> bool:
+    def send_message(self, message: str) -> bool:
         """
         Send a JSON message.
         
