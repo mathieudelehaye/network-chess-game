@@ -1,0 +1,35 @@
+[MASTER]
+# Use multiple processes to speed up Pylint
+jobs=4
+
+# Pickle collected data for later comparisons
+persistent=yes
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=
+    C0111,  # missing-docstring
+    C0103,  # invalid-name
+    R0903,  # too-few-public-methods
+    W0212,  # protected-access
+    R0913,  # too-many-arguments
+    R0914,  # too-many-locals
+    C0301,  # line-too-long (handled by black)
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=100
+
+# Allow variable names like 'fd', 'i', 'x'
+good-names=fd,i,j,k,x,y,_
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=7
+
+# Maximum number of locals for function / method body
+max-locals=20
+
+[TYPECHECK]
+# List of members which are set dynamically
+generated-members=torch.*
