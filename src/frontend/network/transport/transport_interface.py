@@ -6,26 +6,16 @@ class ITransport(ABC):
     """Transport layer interface (Strategy pattern)"""
 
     @abstractmethod
-    def connect(self, host: str, port: int) -> bool:
-        """Establish connection"""
-        pass
-
-    @abstractmethod
-    def disconnect(self) -> None:
-        """Close connection"""
+    def start(self, host: str, port: int) -> bool:
+        """Start receiving data on the transport"""
         pass
 
     @abstractmethod
     def send(self, data: bytes) -> bool:
-        """Send data"""
+        """Send data over the transport"""
         pass
 
     @abstractmethod
-    def receive(self, callback: Callable[[bytes], None]) -> None:
-        """Start receiving data asynchronously"""
-        pass
-
-    @abstractmethod
-    def is_connected(self) -> bool:
-        """Check connection status"""
+    def close(self) -> None:
+        """Close the transport connection"""
         pass

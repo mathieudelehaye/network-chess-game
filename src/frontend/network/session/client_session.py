@@ -41,7 +41,7 @@ class ClientSession:
         # Start transport with our receive callback
         self.transport.start(self._on_receive)
 
-        self._logger.info("Client session started")
+        self._logger.debug("Client session started")
 
     def _on_receive(self, raw: str) -> None:
         """
@@ -120,4 +120,4 @@ class ClientSession:
         # Close transport (stops reader thread)
         self.transport.close()
 
-        self._logger.info("Client session closed")
+        self._logger.debug("Client session closed")

@@ -2,9 +2,10 @@ import sys
 from controllers.game_controller import GameController
 from utils.logger import Logger
 
+
 class ConsoleView:
     def __init__(self):
-        """Initialize console view"""
+        """Construct the console view"""
         self._logger = Logger()
 
     def interactive_loop(self, controller: GameController):

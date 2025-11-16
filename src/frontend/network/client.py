@@ -13,7 +13,7 @@ class Client:
         self.mode = mode
         self.host = host
         self.port = port
-        self.client_fd: Optional[int] = None
+        self.socket: Optional[socket.socket] = None
         self.session: Optional[ClientSession] = None
         self._logger = Logger()
 
@@ -27,22 +27,22 @@ class Client:
                 # to implement
                 pass
             else:  # NetworkMode.TCP
-                self.client_fd = self._connect_tcp()
+                self.socket = self._connect_tcp()
 
-            if self.client_fd < 0:
-                self._logger.error(f"Incorrect file descriptor: {self.client_fd}")
+            fd = self.socket.fileno()
+
+            if fd < 0:
+                self._logger.error(f"Incorrect file descriptor: {fd}")
                 return False
 
             # Create transport using factory
-            transport = TransportFactory.create(self.client_fd, self.mode)
+            transport = TransportFactory.create(fd, self.mode)
 
             # Create session to own the transport
             self.session = ClientSession(transport)
 
             # Start the session
             self.session.start()
-
-            self._logger.info("Connected to server")
 
             return True
 
@@ -60,8 +60,8 @@ class Client:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((self.host, self.port))
-            return sock.fileno()
-        except (OSError) as e:
+            return sock
+        except OSError as e:
             self._logger.error(f"TCP connection failed: {e}")
             return -1
 
@@ -74,16 +74,17 @@ class Client:
         if self.session:
             self.session.close()
 
-        if self.client_fd >= 0:
+        fd = self.socket.fileno()
+        if fd >= 0:
             try:
-                sock = socket.socket(fileno=self.client_fd)
+                sock = socket.socket(fileno=fd)
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
             except OSError:
                 # Socket might be already closed or invalid
                 pass
             finally:
-                self.client_fd = -1
+                self.socket = None
 
         self._logger.info("Disconnected from server")
 

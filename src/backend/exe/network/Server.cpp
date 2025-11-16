@@ -46,7 +46,7 @@ void Server::acceptLoop(std::stop_token st) {
         if (client_fd < 0)
             continue;  // temporary error, try again
 
-        std::cout << "Client connected, fd=" << client_fd << "\n";
+        std::cout << "Client connected" << "\n";
 
         // Create a transport
         auto transport = TransportFactory::create(client_fd, network);

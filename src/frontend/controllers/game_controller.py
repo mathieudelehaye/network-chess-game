@@ -1,5 +1,7 @@
 class GameController:
     pass
+
+
 #     def upload_script(self, filepath: str):
 #         """Upload game script to server"""
 #         with open(filepath, "r", encoding="utf-8") as f:

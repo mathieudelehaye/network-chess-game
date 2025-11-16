@@ -19,7 +19,10 @@ class Logger:
         """Initialize logger object"""
 
         # Constructor seems to be callable more than once, even for a Singleton class object.
-        if hasattr(self, '_initialized') and self._initialized: # pylint: disable=access-member-before-definition
+        # pylint: disable=access-member-before-definition
+        if (
+            hasattr(self, "_initialized") and self._initialized
+        ):
             return
 
         self._initialized = True

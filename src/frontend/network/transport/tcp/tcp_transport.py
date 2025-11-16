@@ -1,11 +1,13 @@
 import os
 import threading
 from typing import Callable, Optional
-from ..transport_interface import ITransport
+
+from network.transport.transport_interface import ITransport
+from utils.logger import Logger
 
 
 class TcpTransport(ITransport):
-    """TCP transport - mirrors C++ TcpTransport"""
+    """Class for TCP transport"""
 
     def __init__(self, socket_fd: int):
         """
@@ -16,6 +18,7 @@ class TcpTransport(ITransport):
         self.fd = socket_fd
         self.running = False
         self.reader_thread: Optional[threading.Thread] = None
+        self._logger = Logger()
 
     def __del__(self):
         """Destructor ensures that the socket is closed."""
@@ -32,7 +35,7 @@ class TcpTransport(ITransport):
         def reader_loop():
             while self.running:
                 try:
-                    # Read from socket (max 1024 bytes like C++ version)
+                    # Read from socket (max 1024 bytes like on backend)
                     data = os.read(self.fd, 1024)
 
                     # Connection closed or broken
