@@ -23,6 +23,9 @@ antlr_target(SimpleChessGameParser
     VISITOR
 )
 
+# Setup chess-library
+include(SetupChessLibrary)
+
 # Find vcpkg dependency packages
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -50,6 +53,7 @@ target_include_directories(${EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/controllers
     ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${CMAKE_CURRENT_SOURCE_DIR}/models/parser
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/game
     ${CMAKE_CURRENT_SOURCE_DIR}/views
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/network/session
@@ -63,6 +67,7 @@ target_link_libraries(${EXE_NAME} PRIVATE
     antlr4_shared
     spdlog::spdlog
     nlohmann_json::nlohmann_json
+    chess-library::chess-library
 )
 
 # Set optimization flags for Release build

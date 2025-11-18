@@ -7,6 +7,7 @@
 #include "antlr4-runtime.h"
 
 using namespace antlr4;
+using namespace chess;
 
 std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
     auto& logger = Logger::instance();
@@ -53,7 +54,6 @@ std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
         // Get first (and should be only) move
         const auto& [from, to] = moves[0];
 
-        logger.debug("Parsed move: " + from + " -> " + to);
         return ParsedMove(from, to);
 
     } catch (const std::exception& e) {

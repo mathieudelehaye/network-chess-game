@@ -37,6 +37,7 @@ if(NOT EXISTS "${ANTLR_CPP_SOURCE_DIR}/runtime/Cpp/cmake/FindANTLR.cmake")
         antlr
         GIT_REPOSITORY https://github.com/antlr/antlr4
         GIT_TAG ${ANTLR_TAG}
+        GIT_SHALLOW    TRUE # only perform a shallow clone (clone with `--depth 1` option), so avoid downloading the whole commit history.
         SOURCE_DIR "${ANTLR_CPP_SOURCE_DIR}"
         SOURCE_SUBDIR "runtime/Cpp"
     )

@@ -69,3 +69,7 @@ void Logger::warning(const std::string& message) {
 void Logger::error(const std::string& message) {
     logger_->error(message);
 }
+
+void Logger::critical(const std::string& msg) {
+    logger_->critical(msg);
+}

@@ -1,7 +1,10 @@
 #pragma once
 
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
+
+#include "GameController.hpp"
 
 /**
  * @brief Routes JSON messages to appropriate handlers
@@ -11,7 +14,7 @@
  */
 class MessageRouter {
    public:
-    MessageRouter() = default;
+    MessageRouter();
     ~MessageRouter() = default;
 
     /**
@@ -23,9 +26,17 @@ class MessageRouter {
 
    private:
     /**
-     * @brief Handle a move command
+     * @brief Handle a `move` command
      * @param move The move string
      * @return JSON response as string
      */
     std::string handleMove(const std::string& move);
+
+    /**
+     * @brief Handle a `display_board` command
+     * @return JSON response as string
+     */
+    std::string handleDisplayBoard();
+
+    std::unique_ptr<GameController> gameController_;
 };

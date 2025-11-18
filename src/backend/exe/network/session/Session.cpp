@@ -8,7 +8,8 @@
 
 using json = nlohmann::json;
 
-Session::Session(std::unique_ptr<ITransport> t) : transport(std::move(t)) {}
+Session::Session(std::unique_ptr<ITransport> t)
+    : transport(std::move(t)), router(std::make_unique<MessageRouter>()) {}
 
 Session::~Session() {
     close();

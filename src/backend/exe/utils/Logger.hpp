@@ -50,6 +50,12 @@ class Logger {
      */
     void error(const std::string& message);
 
+    /**
+     * @brief Log critical error message
+     * @param message The message to log
+     */
+    void critical(const std::string& message);
+
     // Delete copy constructor and assignment operator (Singleton)
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
