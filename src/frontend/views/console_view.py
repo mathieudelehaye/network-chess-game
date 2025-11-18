@@ -1,51 +1,69 @@
-import sys
-from controllers.game_controller import GameController
+"""
+View layer for displaying game information to the user.
+"""
+
 from utils.logger import Logger
 
 
 class ConsoleView:
+    """
+    Handles all user-facing output.
+    Separates presentation logic from business logic.
+    """
+
     def __init__(self):
-        """Construct the console view"""
         self._logger = Logger()
 
-    def interactive_loop(self, controller: GameController):
-        """Read commands from stdin"""
-        self._logger.info("Interactive mode. Enter moves or commands (:help for info)")
+    def display_move(self, description: str) -> None:
+        """
+        Display a move description.
 
-        while True:
-            try:
-                line = input("> ").strip()
+        Args:
+            description: Human-readable move description
+        """
+        self._logger.info(description)
 
-                # Skip empty lines
-                if not line:
-                    continue
+    def display_board(self, board_ascii: str) -> None:
+        """
+        Display the chess board.
 
-                # Meta-commands (start with :)
-                if line.startswith(":"):
-                    self._handle_command(line, controller)
+        Args:
+            board_ascii: ASCII representation of the board
+        """
+        print("\n" + board_ascii)
 
-                # Everything else is assumed to be a move
-                else:
-                    controller.send_move(line)
+    def display_error(self, error: str) -> None:
+        """
+        Display an error message.
 
-            except KeyboardInterrupt:
-                controller.disconnect()
-                break
+        Args:
+            error: Error message
+        """
+        self._logger.error(f"Server error: {error}")
 
-    def _handle_command(self, cmd: str, controller: GameController):
-        if cmd in [":quit", ":q"]:
-            controller.disconnect()
-            sys.exit(0)
-        elif cmd == ":watch":
-            game_id = input("Enter game ID to watch: ")
-            controller.request_watch(game_id)
-        elif cmd.startswith(":upload"):
-            # :upload path/to/file.pgn
-            parts = cmd.split(maxsplit=1)
-            if len(parts) == 2:
-                controller.upload_script(parts[1])
-            else:
-                self._logger.info("Usage: :upload <filepath>")
-        elif cmd == ":help":
-            pass
-            # self._show_help()
+    def display_info(self, info: str) -> None:
+        """
+        Display informational message.
+
+        Args:
+            info: Information to display
+        """
+        self._logger.info(info)
+
+    def display_game_over(self, result: str) -> None:
+        """
+        Display game over message.
+
+        Args:
+            result: Game result (checkmate, stalemate, draw)
+        """
+        self._logger.info(f"Game Over: {result}")
+
+    def display_prompt(self, prompt: str) -> None:
+        """
+        Display a user prompt.
+
+        Args:
+            prompt: Prompt text
+        """
+        print(f"\n{prompt}", end="")

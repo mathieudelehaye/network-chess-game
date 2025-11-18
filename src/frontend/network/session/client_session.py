@@ -1,9 +1,8 @@
 import json
 import threading
 from network.transport.transport_interface import ITransport
-
-# from utils.json_parser import Message
 from utils.logger import Logger
+from controllers.message_router import MessageRouter
 
 
 class ClientSession:
@@ -20,14 +19,13 @@ class ClientSession:
         """
         self.transport = transport
         self._logger = Logger()
-        # self._message_handler: Optional[Callable[[Message], None]] = None
+        self._message_router = MessageRouter()
         self._active = False
 
         # Message buffering
         self._buffer = ""
         self._buffer_lock = threading.Lock()
 
-    # def start(self, message_handler: Optional[Callable[[Message], None]] = None) -> None:
     def start(self) -> None:
         """
         Start the session.
@@ -76,32 +74,16 @@ class ClientSession:
             return
 
         try:
-            # Parse JSON response (fixed: was 'data', should be 'json_str')
+            # Parse JSON response
             response = json.loads(json_str.strip())
-
-            # Handle board display
-            if "board" in response:
-                print("\n" + response["board"])
-                return
-
-            # Handle strike data (validated move)
-            if "strike_number" in response and "piece" in response:
-                self._display_strike(response)
-                return
-
-            # Handle errors
-            if "error" in response:
-                self._logger.error(f"Server error: {response['error']}")
-                if "expected" in response:
-                    self._logger.info(f"Expected format: {response['expected']}")
-                return
-
-            # Generic response
-            self._logger.info(f"Server response: {response}")
+            
+            # Route to appropriate handler (MVC pattern)
+            self._message_router.route(response)
 
         except json.JSONDecodeError as e:
             self._logger.error(f"Invalid JSON from server: {e}")
             self._logger.debug(f"Raw data: {json_str}")
+
 
     def _display_strike(self, strike: dict) -> None:
         """Format and display strike information"""

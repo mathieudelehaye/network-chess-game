@@ -21,7 +21,7 @@ std::optional<::chess::Move> ChessGame::findMove(const std::string& from,
 
         // Parse the requested move
         auto requestedMove = ::chess::uci::uciToMove(board_, uciMove);
-        
+
         // Check if it's NO_MOVE (syntactically invalid)
         if (requestedMove == ::chess::Move::NO_MOVE) {
             return std::nullopt;
