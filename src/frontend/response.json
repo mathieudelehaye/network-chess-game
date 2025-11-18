@@ -1,0 +1,11 @@
+{
+    "data": {
+        "case_dest": "a4",
+        "case_src": "a2",
+        "color": "white",
+        "piece": "pawn",
+        "strike_number": 1
+    },
+    "status": "ok",
+    "type": "move_response"
+}

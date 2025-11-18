@@ -94,21 +94,17 @@ std::string MessageRouter::handleMove(const std::string& move) {
 
 std::string MessageRouter::handleDisplayBoard() {
     auto& logger = Logger::instance();
+    logger.debug("Delegating to GameController::handleDisplayBoard");
 
     try {
-        std::string boardASCII = gameController_->getGame().getBoardASCII();
-
-        json response;
-        response["board"] = boardASCII;
-        response["status"] = "ok";
-
-        logger.debug("Sent board display");
-        return response.dump();
+        // Delegate to GameController (which builds JSON)
+        return gameController_->handleDisplayBoard();
 
     } catch (const std::exception& e) {
         logger.critical("Exception in handleDisplayBoard: " + std::string(e.what()));
 
         json error;
+        error["type"] = "error";
         error["error"] = "Internal server error";
         return error.dump();
     }

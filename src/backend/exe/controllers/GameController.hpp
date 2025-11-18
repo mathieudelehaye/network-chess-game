@@ -19,6 +19,12 @@ class GameController {
     std::string handleMove(const std::string& from, const std::string& to);
 
     /**
+     * @brief Handle a board display request
+     * @return JSON response string with board ASCII
+     */
+    std::string handleDisplayBoard();
+
+    /**
      * @brief Start a new game
      */
     void startNewGame();

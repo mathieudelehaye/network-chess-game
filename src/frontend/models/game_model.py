@@ -17,7 +17,7 @@ class GameModel:
 
         Args:
             strike: Strike data from server containing:
-                - strike_number: int
+                - X: int
                 - color: str ("white" or "black")
                 - piece: str ("pawn", "rook", etc.)
                 - case_src: str (e.g., "e2")

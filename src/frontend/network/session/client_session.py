@@ -76,6 +76,9 @@ class ClientSession:
         try:
             # Parse JSON response
             response = json.loads(json_str.strip())
+
+            with open("response.json", "w") as f:
+                json.dump(response, f, indent=4)
             
             # Route to appropriate handler (MVC pattern)
             self._message_router.route(response)
