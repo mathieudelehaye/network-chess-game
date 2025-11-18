@@ -65,3 +65,42 @@ std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
 bool MoveParser::isValid(const std::string& move) {
     return parse(move).has_value();
 }
+
+std::vector<ParsedMove> MoveParser::parseGame(const std::string& game_content) {
+    auto& logger = Logger::instance();
+    std::vector<ParsedMove> moves;
+
+    try {
+        // Parse entire game with ANTLR
+        ANTLRInputStream input(game_content);
+        SimpleChessGameLexer lexer(&input);
+        CommonTokenStream tokens(&lexer);
+        SimpleChessGameParser parser(&tokens);
+
+        parser.removeErrorListeners();
+        tree::ParseTree* tree = parser.game();
+        
+        if (parser.getNumberOfSyntaxErrors() > 0) {
+            logger.warning("Syntax errors found in game file");
+            return moves;
+        }
+
+        // Visit tree and extract moves
+        GameVisitor visitor;
+        visitor.visit(tree);
+        
+        auto raw_moves = visitor.getMoves();
+        
+        // Convert to ParsedMove structs
+        for (const auto& [from, to] : raw_moves) {
+            moves.push_back({from, to});
+        }
+
+        logger.info("Parsed " + std::to_string(moves.size()) + " moves from game");
+        return moves;
+
+    } catch (const std::exception& e) {
+        logger.error("Exception parsing game: " + std::string(e.what()));
+        return moves;
+    }
+}

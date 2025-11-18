@@ -18,6 +18,8 @@ download/
 log/
 __pycache__/
 
+response.json
+
 # Precompiled Headers
 *.gch
 *.pch

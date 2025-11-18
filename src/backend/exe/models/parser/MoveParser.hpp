@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 /**
  * @brief Parsed move data
@@ -34,4 +35,11 @@ class MoveParser {
      * @return true if valid syntax
      */
     bool isValid(const std::string& move);
+    
+    /**
+     * @brief Parse entire game file (for file upload mode)
+     * @param move The file content
+     * @return The parsed moves 
+     */
+    std::vector<ParsedMove> parseGame(const std::string& game_content);
 };

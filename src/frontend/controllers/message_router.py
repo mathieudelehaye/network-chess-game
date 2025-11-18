@@ -34,12 +34,24 @@ class MessageRouter:
                 self._handle_board_display(msg)
             elif msg_type == "move_response":
                 self._handle_move_response(msg)
+            elif msg_type == "game_response":
+                self._handle_game_response(msg)
+            elif msg_type == "upload_progress":
+                self._handle_upload_progress(msg)
             else:
                 self._logger.warning(f"Unknown message type: {msg_type}")
 
         except Exception as e:
             self._logger.error(f"Error routing message: {e}")
 
+    def _handle_upload_progress(self, msg: dict) -> None:
+        """Handle upload progress acknowledgment."""
+        filename = msg.get("filename", "unknown")
+        percent = msg.get("percent", 0)
+        chunk = msg.get("chunk_received", 0)
+        total = msg.get("chunks_total", 0)
+        
+        self._logger.debug(f"Server received: {filename} {percent}% ({chunk}/{total})")
 
     def _handle_error(self, msg: dict) -> None:
         """
@@ -79,6 +91,48 @@ class MessageRouter:
         
         if data.get("is_stalemate"):
             self._view.display_info("Stalemate!")
+
+    def _handle_game_response(self, msg: dict) -> None:
+        """
+        Handle game file processing response.
+        Displays all moves sequentially.
+        """
+        filename = msg.get("filename", "unknown")
+        total_moves = msg.get("total_moves", 0)
+        moves = msg.get("moves", [])
+
+        self._logger.info(f"Game: {filename} ({total_moves} moves)")
+        self._view.display_info(f"\n{'='*50}")
+        self._view.display_info(f"Playing game from: {filename}")
+        self._view.display_info(f"{'='*50}\n")
+
+        successful_moves = 0
+        errors = 0
+
+        # Display each move
+        for idx, move in enumerate(moves, start=1):
+            if move.get("type") == "error":
+                error_msg = move.get('error', 'Unknown error')
+                line_num = move.get('data', {}).get('line', idx)
+                self._view.display_error(f"Line {line_num}: {error_msg}")
+                errors += 1
+                # Don't break - continue showing other moves
+            elif move.get("type") == "move_response":
+                data = move.get("data", {})
+                description = self._model.build_move_description(data)
+                self._view.display_move(description)
+                successful_moves += 1
+
+                # Show special states
+                if data.get("is_check"):
+                    self._view.display_info("  → Check!")
+                if data.get("is_checkmate"):
+                    self._view.display_info("  → Checkmate!")
+                    break  # Game over on checkmate
+
+        self._view.display_info(f"\n{'='*50}")
+        self._view.display_info(f"Game completed: {successful_moves} moves, {errors} errors")
+        self._view.display_info(f"{'='*50}\n")
 
     def _handle_game_over(self, msg: dict) -> None:
         """

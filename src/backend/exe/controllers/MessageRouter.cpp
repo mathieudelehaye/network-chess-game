@@ -35,6 +35,14 @@ std::string MessageRouter::route(const nlohmann::json& msg) {
         if (msg.contains("command") && msg["command"] == "display_board") {
             logger.debug("Routing display_board command");
             return handleDisplayBoard();
+        } 
+        
+        // Handle play_game command
+        if (msg.contains("command") && msg["command"] == "play_game") {
+            logger.debug("Routing play_game command");
+            const std::string& content = msg["content"];
+            const std::string& filename = msg["filename"];
+            return handlePlayGame(content, filename);
         }
 
         // Unknown message type
@@ -106,6 +114,56 @@ std::string MessageRouter::handleDisplayBoard() {
         json error;
         error["type"] = "error";
         error["error"] = "Internal server error";
+        return error.dump();
+    }
+}
+
+std::string MessageRouter::handlePlayGame(const std::string& content, const std::string& filename) {
+    auto& logger = Logger::instance();
+    logger.info("Processing game file: " + filename);
+
+    try {
+        // Parse entire game at once with ANTLR
+        MoveParser parser;
+        auto moves = parser.parseGame(content); 
+
+        logger.info("Found " + std::to_string(moves.size()) + " moves in " + filename);
+
+        // Apply each move
+        json responses = json::array();
+
+        for (size_t i = 0; i < moves.size(); ++i) {
+            const auto& move = moves[i];
+            
+            // Apply move to game controller
+            std::string move_response = gameController_->handleMove(move.from, move.to);
+            json move_json = json::parse(move_response);
+            responses.push_back(move_json);
+
+            // Stop on error
+            if (move_json["type"] == "error") {
+                logger.warning("Error at move " + std::to_string(i + 1) + ": " + 
+                             move.from + "-" + move.to);
+                break;
+            }
+        }
+
+        // Build final response
+        json final_response;
+        final_response["type"] = "game_response";
+        final_response["filename"] = filename;
+        final_response["total_moves"] = responses.size();
+        final_response["moves"] = responses;
+
+        logger.info("Game file processed: " + std::to_string(responses.size()) + " moves");
+        return final_response.dump();
+
+    } catch (const std::exception& e) {
+        logger.critical("Exception in handlePlayGame: " + std::string(e.what()));
+
+        json error;
+        error["type"] = "error";
+        error["error"] = "Failed to process game file";
         return error.dump();
     }
 }

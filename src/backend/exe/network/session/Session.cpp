@@ -17,7 +17,6 @@ Session::~Session() {
 
 void Session::start() {
     active = true;
-
     transport->start([this](const std::string& payload) { onReceive(payload); });
 }
 
@@ -51,7 +50,13 @@ void Session::handleMessage(const std::string& json_str) {
         // Parse JSON and check its correct syntax
         json msg = json::parse(json_str);
 
-        // Route to controller
+        // Check if this is a file upload chunk
+        if (msg.contains("command") && msg["command"] == "upload_game") {
+            handleFileUpload(msg);
+            return;
+        }
+
+        // Otherwise, route normally
         std::string response = router->route(msg);
 
         // Send response back
@@ -74,6 +79,108 @@ void Session::handleMessage(const std::string& json_str) {
         json error_response;
         error_response["error"] =
             "Internal server error";  // then sends a generic error message to the client
+        send(error_response.dump());
+    }
+}
+
+void Session::handleFileUpload(const nlohmann::json& msg) {
+    auto& logger = Logger::instance();
+
+    try {
+        // Extract metadata
+        auto metadata = msg["metadata"];
+        std::string filename = metadata["filename"];
+        int total_size = metadata["total_size"];
+        int chunks_total = metadata["chunks_total"];
+        int chunk_current = metadata["chunk_current"];
+        std::string chunk_data = msg["data"];
+
+        // Get or create upload state for this file
+        auto& upload = file_uploads_[filename];
+
+        // Initialize on first chunk
+        if (chunk_current == 1) {
+            upload.filename = filename;
+            upload.total_size = total_size;
+            upload.chunks_total = chunks_total;
+            upload.chunks_received = 0;
+            upload.accumulated_data.clear();
+            upload.accumulated_data.reserve(total_size);  // Pre-allocate
+            
+            logger.info("Starting file upload: " + filename + 
+                       " (" + std::to_string(total_size) + " bytes)");
+        }
+
+        // Append chunk data
+        upload.accumulated_data += chunk_data;
+        upload.chunks_received = chunk_current;
+
+        // Calculate and log progress
+        int percent = (chunk_current * 100) / chunks_total;
+        logger.info("Downloading " + filename + ": " + 
+                   std::to_string(percent) + "% (" + 
+                   std::to_string(chunk_current) + "/" + 
+                   std::to_string(chunks_total) + ")");
+
+        // Send progress acknowledgment
+        json ack;
+        ack["type"] = "upload_progress";
+        ack["filename"] = filename;
+        ack["chunk_received"] = chunk_current;
+        ack["chunks_total"] = chunks_total;
+        ack["percent"] = percent;
+        send(ack.dump());
+
+        // Check if upload complete
+        if (chunk_current >= chunks_total) {
+            logger.info("File upload complete: " + filename + 
+                       " (" + std::to_string(upload.accumulated_data.size()) + 
+                       " bytes received)");
+
+            // Process the complete file
+            processGameFile(upload.accumulated_data, filename);
+
+            // Clean up
+            file_uploads_.erase(filename);
+        }
+
+    } catch (const json::exception& e) {
+        logger.error("Error processing file upload chunk: " + std::string(e.what()));
+
+        json error_response;
+        error_response["type"] = "error";
+        error_response["error"] = "Invalid upload chunk format";
+        send(error_response.dump());
+    }
+}
+
+void Session::processGameFile(const std::string& content, const std::string& filename) {
+    auto& logger = Logger::instance();
+    logger.info("Processing game file: " + filename);
+
+    try {
+        // Create a temporary JSON message for the router
+        json game_msg;
+        game_msg["command"] = "play_game";
+        game_msg["content"] = content;
+        game_msg["filename"] = filename;
+
+        // Route to game controller for processing
+        std::string response = router->route(game_msg);
+
+        // Send final response with all moves
+        if (!response.empty()) {
+            send(response);
+            logger.info("Game file processed and response sent");
+        }
+
+    } catch (const std::exception& e) {
+        logger.error("Error processing game file: " + std::string(e.what()));
+
+        json error_response;
+        error_response["type"] = "error";
+        error_response["error"] = "Failed to process game file";
+        error_response["filename"] = filename;
         send(error_response.dump());
     }
 }

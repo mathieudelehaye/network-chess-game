@@ -41,3 +41,13 @@ cmake --build build/backend/debug -j$(nproc)
 ```
 cmake --build build/backend/debug/ --target docs
 ```
+
+Cmake script should automatically download the chess-library (https://github.com/Disservin/chess-library). If needed to download it manually in the download cache folder:
+```
+cd download
+wget https://github.com/Disservin/chess-library/archive/refs/heads/master.zip -O chess-library.zip
+unzip -q chess-library.zip
+mv chess-library-master chess-library
+rm chess-library.zip
+ls -la chess-library/
+```

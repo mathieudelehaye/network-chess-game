@@ -38,5 +38,11 @@ class MessageRouter {
      */
     std::string handleDisplayBoard();
 
+    /**
+     * @brief Handle a `play_game` command
+     * @return JSON response as string
+     */
+    std::string handlePlayGame(const std::string& content, const std::string& filename);
+
     std::unique_ptr<GameController> gameController_;
 };
