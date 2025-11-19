@@ -33,7 +33,7 @@ class ITransport {
      * @brief Starts the transport input loop.
      *
      * Implementations typically start a background thread that continuously reads
-     * from the socket. When data is received, the provided callback is invoked.
+     * from the connection. When data is received, the provided callback is invoked.
      *
      * @param onReceive Callback invoked each time a full payload is received.
      */

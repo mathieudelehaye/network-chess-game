@@ -79,7 +79,7 @@ std::vector<ParsedMove> MoveParser::parseGame(const std::string& game_content) {
 
         parser.removeErrorListeners();
         tree::ParseTree* tree = parser.game();
-        
+
         if (parser.getNumberOfSyntaxErrors() > 0) {
             logger.warning("Syntax errors found in game file");
             return moves;
@@ -88,9 +88,9 @@ std::vector<ParsedMove> MoveParser::parseGame(const std::string& game_content) {
         // Visit tree and extract moves
         GameVisitor visitor;
         visitor.visit(tree);
-        
+
         auto raw_moves = visitor.getMoves();
-        
+
         // Convert to ParsedMove structs
         for (const auto& [from, to] : raw_moves) {
             moves.push_back({from, to});

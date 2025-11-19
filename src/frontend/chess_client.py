@@ -4,7 +4,6 @@
 import argparse
 import sys
 from pathlib import Path
-from controllers.game_controller import GameController
 from utils.logger import Logger
 
 

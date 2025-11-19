@@ -18,19 +18,6 @@ std::optional<StrikeData> ChessGame::applyMove(const std::string& from, const st
     return buildStrikeData(*move);
 }
 
-GameStatus ChessGame::getStatus() const {
-    if (board_.isGameOver().second == chess::GameResult::LOSE) {
-        return GameStatus::CHECKMATE;
-    }
-    if (board_.isGameOver().second == chess::GameResult::DRAW) {
-        return GameStatus::STALEMATE;
-    }
-    if (board_.inCheck()) {
-        return GameStatus::CHECK;
-    }
-    return GameStatus::IN_PROGRESS;
-}
-
 chess::Color ChessGame::getCurrentPlayer() const {
     return board_.sideToMove();
 }
@@ -54,7 +41,27 @@ void ChessGame::reset() {
     moveNumber_ = 1;
 }
 
-std::optional<chess::Move> ChessGame::findMove(const std::string& from, const std::string& to) const {
+bool ChessGame::isGameOver() const {
+    auto [reason, result] = board_.isGameOver();
+    return result == chess::GameResult::LOSE;
+}
+
+bool ChessGame::inCheck() const {
+    return board_.inCheck();
+}
+
+bool ChessGame::isCheckmate() const {
+    auto [reason, result] = board_.isGameOver();
+    return result == chess::GameResult::LOSE;
+}
+
+bool ChessGame::isStalemate() const {
+    auto [reason, result] = board_.isGameOver();
+    return result == chess::GameResult::DRAW;
+}
+
+std::optional<chess::Move> ChessGame::findMove(const std::string& from,
+                                               const std::string& to) const {
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board_);
 
@@ -76,21 +83,26 @@ StrikeData ChessGame::buildStrikeData(const chess::Move& move) const {
     data.case_dest = std::string(move.to());
     data.piece = getPieceName(board_.at(move.to()).type());
     data.is_capture = board_.isCapture(move);
-    data.is_check = board_.inCheck();
-    data.is_checkmate = (getStatus() == GameStatus::CHECKMATE);
-    data.is_stalemate = (getStatus() == GameStatus::STALEMATE);
+    data.is_check = inCheck();
+    data.is_checkmate = isCheckmate();
+    data.is_stalemate = isStalemate();
     data.strike_number = moveNumber_;
-    
+
     return data;
 }
 
 std::string ChessGame::getPieceName(chess::PieceType type) const {
-    // Direct comparison with enum values
-    if (type == chess::PieceType::PAWN) return "pawn";
-    if (type == chess::PieceType::KNIGHT) return "knight";
-    if (type == chess::PieceType::BISHOP) return "bishop";
-    if (type == chess::PieceType::ROOK) return "rook";
-    if (type == chess::PieceType::QUEEN) return "queen";
-    if (type == chess::PieceType::KING) return "king";
+    if (type == chess::PieceType::PAWN)
+        return "pawn";
+    if (type == chess::PieceType::KNIGHT)
+        return "knight";
+    if (type == chess::PieceType::BISHOP)
+        return "bishop";
+    if (type == chess::PieceType::ROOK)
+        return "rook";
+    if (type == chess::PieceType::QUEEN)
+        return "queen";
+    if (type == chess::PieceType::KING)
+        return "king";
     return "unknown";
 }

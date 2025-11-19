@@ -7,6 +7,6 @@ std::any GameVisitor::visitStrike(chess::SimpleChessGameParser::StrikeContext* c
         std::string to = ctx->COORD(1)->getText();
         moves_.push_back(std::make_pair(from, to));
     }
-    
+
     return std::any();
 }

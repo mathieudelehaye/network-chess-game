@@ -4,31 +4,60 @@
 #include <optional>
 #include <string>
 
-#include "GameStatus.hpp"
 #include "StrikeData.hpp"
 
+/**
+ * @brief Core chess game model
+ *
+ * Encapsulates chess board state
+ */
 class ChessGame {
-public:
+   public:
     ChessGame();
-    ~ChessGame() = default;
 
+    /**
+     * @brief Apply a move and return strike data
+     * @return StrikeData if move is valid, nullopt otherwise
+     */
     std::optional<StrikeData> applyMove(const std::string& from, const std::string& to);
-    
-    GameStatus getStatus() const;  // ← Changed return type
-    
-    chess::Color getCurrentPlayer() const;
-    
-    std::string getFEN() const;
-    std::string getBoardASCII() const;
+
+    /**
+     * @brief Check if a move is legal
+     */
     bool isLegalMove(const std::string& from, const std::string& to) const;
+
+    /**
+     * @brief Get current player color
+     */
+    chess::Color getCurrentPlayer() const;
+
+    /**
+     * @brief Get FEN notation of current position
+     */
+    std::string getFEN() const;
+
+    /**
+     * @brief Get ASCII representation of board
+     */
+    std::string getBoardASCII() const;
+
+    /**
+     * @brief Reset to starting position
+     */
     void reset();
-    int getMoveNumber() const { return moveNumber_; }
 
-private:
-    chess::Board board_;
-    int moveNumber_;
+   private:
+    // Internal state queries
+    bool isGameOver() const;
+    bool inCheck() const;
+    bool isCheckmate() const;
+    bool isStalemate() const;
 
+    // Helper methods
     std::optional<chess::Move> findMove(const std::string& from, const std::string& to) const;
     StrikeData buildStrikeData(const chess::Move& move) const;
     std::string getPieceName(chess::PieceType type) const;
+
+    chess::Board board_;
+    int moveNumber_;
 };

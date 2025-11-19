@@ -50,7 +50,7 @@ void TcpTransport::start(ReceiveCallback onReceive) {
  * @return Number of bytes sent, or -1 on error.
  */
 void TcpTransport::send(const std::string& data) {
-    ::write(fd, data.data(), data.size());
+    write(fd, data.data(), data.size());
 }
 
 /**
@@ -60,7 +60,7 @@ void TcpTransport::close() {
     running = false;
 
     if (fd >= 0) {
-        ::shutdown(fd, SHUT_RDWR);
+        shutdown(fd, SHUT_RDWR);
         ::close(fd);
         fd = -1;
     }

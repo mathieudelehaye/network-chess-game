@@ -10,14 +10,12 @@
 
 // Custom visitor to handle parsed moves
 class GameVisitor : public chess::SimpleChessGameBaseVisitor {
-public:
+   public:
     std::any visitStrike(chess::SimpleChessGameParser::StrikeContext* ctx) override;
 
-    const std::vector<std::pair<std::string, std::string>>& getMoves() const {
-        return moves_;
-    }
+    const std::vector<std::pair<std::string, std::string>>& getMoves() const { return moves_; }
 
-private:
+   private:
     // Parsed moves (from, to)
     std::vector<std::pair<std::string, std::string>> moves_;
 };
