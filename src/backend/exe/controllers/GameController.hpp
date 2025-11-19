@@ -11,28 +11,10 @@ class GameController {
     ~GameController() = default;
 
     /**
-     * @brief Handle a move request using parsed coordinates
-     * @param from Source square (e.g., "e2")
-     * @param to Destination square (e.g., "e4")
-     * @return JSON response string
-     */
-    std::string handleMove(const std::string& from, const std::string& to);
-
-    /**
      * @brief Handle a board display request
      * @return JSON response string with board ASCII
      */
     std::string handleDisplayBoard();
-
-    /**
-     * @brief Start a new game
-     */
-    void startNewGame();
-
-    /**
-     * @brief Get current game state
-     */
-    const ChessGame& getGame() const { return *game_; }
 
    private:
     std::unique_ptr<ChessGame> game_;
