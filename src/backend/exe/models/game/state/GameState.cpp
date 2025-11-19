@@ -7,6 +7,7 @@ json WaitingForPlayersState::handleJoinRequest(GameContext* context, const std::
                                                const std::string& color) {
     auto& logger = Logger::instance();
 
+    // Validate and assign player color
     if (color == "white") {
         if (context->hasWhitePlayer() && context->getWhitePlayer() != player_id) {
             return buildError("White player slot already taken");
@@ -26,32 +27,77 @@ json WaitingForPlayersState::handleJoinRequest(GameContext* context, const std::
     // Check if it's single-player (same session ID for both colors)
     bool is_single_player = (context->getWhitePlayer() == context->getBlackPlayer());
 
+    // Build response for the joining player
+    json join_response = {
+        {"type", "join_success"},
+        {"session_id", player_id},
+        {"color", color},
+        {"status", context->getStatusMessage()},
+        {"single_player", is_single_player}
+    };
+
+    // Check if both players have joined
     if (context->bothPlayersJoined()) {
+        // Transition to ReadyToStartState
         context->transitionTo(std::make_unique<ReadyToStartState>());
 
         if (is_single_player) {
             logger.info("Single-player mode detected");
+        } else {
+            logger.info("Both players joined! Ready to start.");
         }
+
+        // Broadcast game_ready to ALL clients (both players can now start)
+        json ready_broadcast = {
+            {"type", "game_ready"},
+            {"status", "Both players joined. You can now start the game!"},
+            {"white_player", context->getWhitePlayer()},
+            {"black_player", context->getBlackPlayer()},
+            {"single_player", is_single_player}
+        };
+        context->setPendingBroadcast(ready_broadcast);
+
+    } else {
+        // Only one player joined so far
+        // Broadcast player_joined to OTHER clients
+        json player_joined_broadcast = {
+            {"type", "player_joined"},
+            {"color", color},
+            {"status", context->getStatusMessage()}
+        };
+        context->setPendingBroadcast(player_joined_broadcast);
     }
 
-    return json{{"type", "join_success"},
-                {"color", color},
-                {"status", context->getStatusMessage()},
-                {"single_player", is_single_player}};
+    return join_response;
 }
 
 json ReadyToStartState::handleStartRequest(GameContext* context, const std::string& player_id) {
     auto& logger = Logger::instance();
+    logger.info("Session " + player_id + " starting game");
 
-    if (player_id != context->getWhitePlayer() && player_id != context->getBlackPlayer()) {
-        return buildError("Only joined players can start the game");
-    }
-
+    // Transition to InProgressState
     context->transitionTo(std::make_unique<InProgressState>());
 
+    // Initialize chess game
+    context->getChessGame()->reset();
     logger.info("Game started");
 
-    return json{{"type", "game_started"}, {"status", context->getStatusMessage()}};
+    // Build response for the player who started
+    json start_response = {
+        {"type", "game_started"},
+        {"status", context->getStatusMessage()}
+    };
+
+    // Broadcast game_started to ALL players
+    json game_started_broadcast = {
+        {"type", "game_started"},
+        {"status", context->getStatusMessage()},
+        {"white_player", context->getWhitePlayer()},
+        {"black_player", context->getBlackPlayer()}
+    };
+    context->setPendingBroadcast(game_started_broadcast);
+
+    return start_response;
 }
 
 json ReadyToStartState::handleEndRequest(GameContext* context, const std::string& /*player_id*/) {
@@ -80,9 +126,13 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
     response["type"] = "move_result";
     response["success"] = true;
     response["strike"] = {
-        {"from", strike_data->case_src},         {"to", strike_data->case_dest},
-        {"piece", strike_data->piece},           {"capture", strike_data->is_capture},
-        {"check", strike_data->is_check},        {"checkmate", strike_data->is_checkmate},
+        {"from", strike_data->case_src},         
+        {"to", strike_data->case_dest},
+        {"piece", strike_data->piece},  
+        {"strike_number", strike_data->strike_number},  
+        {"capture", strike_data->is_capture},
+        {"check", strike_data->is_check},        
+        {"checkmate", strike_data->is_checkmate},
         {"stalemate", strike_data->is_stalemate}};
 
     // Check if game ended

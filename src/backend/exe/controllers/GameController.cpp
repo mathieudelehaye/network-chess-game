@@ -6,13 +6,17 @@
 
 using json = nlohmann::json;
 
-GameController::GameController() : game_context_(std::make_unique<GameContext>()) {
+GameController::GameController(
+    std::shared_ptr<GameContext> context
+): game_context_(std::move(context)) {
     auto& logger = Logger::instance();
     logger.debug("GameController initialised");
 }
 
-std::string GameController::routeMessage(const std::string& content,
-                                         const std::string& session_id) {
+std::string GameController::routeMessage(
+    const std::string& content,
+    const std::string& session_id) {
+    
     auto& logger = Logger::instance();
 
     // Parse application message (should be JSON)

@@ -4,8 +4,9 @@
 import argparse
 import sys
 from pathlib import Path
+from network.client import Client
+from network.network_mode import NetworkMode
 from utils.logger import Logger
-
 
 def parse_arguments():
     """Parse command-line arguments."""
@@ -14,10 +15,12 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  main.py                                    # Interactive multiplayer mode
-  main.py -f ./test/game/game_01             # Play from file (single-player)
-  main.py -i 192.168.1.100 -p 3000           # Custom server
-  main.py -v -f ./test/game/game_01          # Verbose mode
+  chess_client.py # Interactive multiplayer
+  mode 
+  chess_client.py -f ./test/game/game_01 # Play from file
+  (single-player) 
+  chess_client.py -i 192.168.1.100 -p 3000 # Custom server
+  chess_client.py -v -f ./test/game/game_01 # Verbose mode
         """
     )
     
@@ -58,16 +61,32 @@ def main():
     if args.verbose:
         logger.set_level("DEBUG")
     
-    # Create controller
-    controller = GameController(host=args.ip, port=args.port, logger=logger)
+    try:
+        logger.info("Starting chess client...")
+        
+        client = Client(
+            mode=NetworkMode.TCP,
+            host=args.ip,
+            port=args.port
+        )
+        
+        client.start()
+        
+        print("Press Enter to disconnect...")
+        
+        input()  # Wait for user to press any key
+        
+        logger.info("Stopping client...")
+        client.stop()
+        
+    except RuntimeError as e:
+        logger.critical(f"Client initialization failed: {e}")
+        return 1
+    except Exception as e:
+        logger.critical(f"Unexpected error: {e}")
+        return 2
     
-    # Run in appropriate mode
-    if args.file:
-        # Single-player: upload and play file
-        return controller.run_file_mode(args.file)
-    else:
-        # Multiplayer: interactive menu
-        return controller.run_interactive_mode()
+    return 0
 
 
 if __name__ == "__main__":

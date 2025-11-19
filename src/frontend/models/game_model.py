@@ -1,57 +1,89 @@
 """
 Client-side game model.
-Handles data transformation and business logic.
+Handles game data and data transformation logic.
+State management is handled by ClientContext.
 """
+
+from typing import Optional
 
 
 class GameModel:
     """
-    Model layer for client-side game logic.
-    Transforms server data into human-readable formats.
+    Model layer - stores game data and provides transformation logic.
+    
+    Responsibilities:
+    1. Store game data (turn tracking, player info)
+    2. Transform server data into human-readable formats
+    
+    State FSM is handled by ClientContext separately.
+    NO parsing or validation - server does that.
     """
-
+    
+    def __init__(self):
+        # Game data (not state - that's in ClientContext)
+        self._current_turn: Optional[str] = None
+        self._white_joined = False
+        self._black_joined = False
+        self._move_count = 0
+    
+    @property
+    def current_turn(self) -> Optional[str]:
+        return self._current_turn
+    
+    @property
+    def white_joined(self) -> bool:
+        return self._white_joined
+    
+    @property
+    def black_joined(self) -> bool:
+        return self._black_joined
+    
+    @property
+    def move_count(self) -> int:
+        return self._move_count
+    
+    @property
+    def both_players_joined(self) -> bool:
+        """Check if both players have joined"""
+        return self._white_joined and self._black_joined
+    
+    def set_player_joined(self, color: str):
+        """Track when a player joins"""
+        if color == "white":
+            self._white_joined = True
+        elif color == "black":
+            self._black_joined = True
+    
+    def start_game(self):
+        """Initialize game data when game starts"""
+        self._current_turn = "white"  # White always starts
+        self._move_count = 0
+    
+    def update_turn(self):
+        """Update turn after a move"""
+        if self._current_turn == "white":
+            self._current_turn = "black"
+        else:
+            self._current_turn = "white"
+        self._move_count += 1
+    
+    def reset(self):
+        """Reset all game data"""
+        self._current_turn = None
+        self._white_joined = False
+        self._black_joined = False
+        self._move_count = 0
+    
     @staticmethod
     def build_move_description(strike: dict) -> str:
         """
         Build human-readable move description from strike data.
-
+        
         Args:
-            strike: Strike data from server containing:
-                - X: int
-                - color: str ("white" or "black")
-                - piece: str ("pawn", "rook", etc.)
-                - case_src: str (e.g., "e2")
-                - case_dest: str (e.g., "e4")
-                - is_capture: bool (optional)
-                - captured_piece: str (optional)
-                - captured_color: str (optional)
-                - is_castling: bool (optional)
-                - castling_type: str (optional, "big" or "little")
-
+            strike: Strike data from server (already validated/parsed)
+            
         Returns:
             Human-readable move description
-            
-        Examples:
-            >>> GameModel.build_move_description({
-            ...     "strike_number": 1,
-            ...     "color": "white",
-            ...     "piece": "pawn",
-            ...     "case_src": "e2",
-            ...     "case_dest": "e4"
-            ... })
-            '1. white pawn moves from e2 to e4'
-            
-            >>> GameModel.build_move_description({
-            ...     "strike_number": 3,
-            ...     "color": "white",
-            ...     "piece": "knight",
-            ...     "case_src": "f3",
-            ...     "case_dest": "h4",
-            ...     "is_capture": True,
-            ...     "captured_piece": "queen",
-            ...     "captured_color": "black"
-            ... })
-            '3. white knight on f3 takes black queen on h4'
         """
         msg = f"{strike['strike_number']}. {strike['color']} {strike['piece']}"
 
@@ -66,3 +98,14 @@ class GameModel:
             msg += f" moves from {strike['case_src']} to {strike['case_dest']}"
 
         return msg
+    
+    @staticmethod
+    def build_strike_suffix(strike: dict) -> str:
+        """Build check/checkmate/stalemate suffix"""
+        if strike.get("is_checkmate"):
+            return ". Checkmate"
+        elif strike.get("is_check"):
+            return ". Check"
+        elif strike.get("is_stalemate"):
+            return ". Stalemate"
+        return ""

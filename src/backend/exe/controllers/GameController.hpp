@@ -4,7 +4,6 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
-
 #include "GameContext.hpp"
 
 struct FileUploadState {
@@ -23,7 +22,7 @@ struct FileUploadState {
  */
 class GameController {
    public:
-    GameController();
+    GameController(std::shared_ptr<GameContext> context);
     ~GameController() = default;
 
     /**
@@ -33,6 +32,10 @@ class GameController {
      * @return JSON response as string
      */
     std::string routeMessage(const std::string& content, const std::string& session_id);
+
+    std::optional<json> getAndClearPendingBroadcast() {
+        return game_context_->takePendingBroadcast();
+    }
 
    private:
     /**
@@ -88,7 +91,7 @@ class GameController {
     std::string handleFileUploadChunk(const nlohmann::json& msg, const std::string& session_id);
 
     // State machine for all game modes
-    std::unique_ptr<GameContext> game_context_;
+    std::shared_ptr<GameContext> game_context_;
 
     // Track file uploads per session
     std::unordered_map<std::string, FileUploadState> file_uploads_;

@@ -17,7 +17,7 @@ class TransportFactory:
         """
         if mode == NetworkMode.TCP:
             return TcpTransport(socket_fd)
-        elif mode == NetworkMode.UNIX:
+        elif mode == NetworkMode.IPC:
             # to implement
             return None
         else:

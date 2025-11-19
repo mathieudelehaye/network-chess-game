@@ -2,8 +2,7 @@ import json
 import threading
 from network.transport.transport_interface import ITransport
 from utils.logger import Logger
-from controllers.message_router import MessageRouter
-
+from controllers.game_controller import GameController
 
 class ClientSession:
     """
@@ -11,15 +10,18 @@ class ClientSession:
     Handles message framing, buffering, and JSON parsing.
     """
 
-    def __init__(self, transport: ITransport):
+    def __init__(
+        self, 
+        transport: ITransport, 
+        controller: GameController):
         """
         Construct a client session.
 
         @param transport The transport layer to use (ownership transferred)
         """
         self.transport = transport
+        self.controller = controller
         self._logger = Logger()
-        self._message_router = MessageRouter()
         self._active = False
 
         # Message buffering
@@ -78,13 +80,13 @@ class ClientSession:
             response = json.loads(json_str.strip())
             
             # Route to appropriate handler (MVC pattern)
-            self._message_router.route(response)
+            self.controller.route_message(response)
 
         except json.JSONDecodeError as e:
             self._logger.error(f"Invalid JSON from server: {e}")
             self._logger.debug(f"Raw data: {json_str}")
 
-
+    # move to the MVC model or view 
     def _display_strike(self, strike: dict) -> None:
         """Format and display strike information"""
         # Build human-readable message
@@ -111,7 +113,7 @@ class ClientSession:
         self._logger.info(msg)
 
     # def send_message(self, message: Message) -> bool:
-    def send_message(self, message: dict) -> bool:
+    def send(self, message: dict) -> bool:
         """
         Send a JSON message.
 

@@ -1,320 +1,406 @@
-import signal
-import sys
-import time
+"""
+Game Controller - coordinates Model (ClientContext + GameModel) and View (ConsoleView).
+Routes server messages and handles user actions.
+"""
+
 from pathlib import Path
-from network.client import Client
-from network.network_mode import NetworkMode
-from views.menu_view import MenuView
-from models.game_state import ClientGameState
+from typing import Optional
 from utils.logger import Logger
+from models.client_context import ClientContext, ClientState
+from models.game_model import GameModel
+from views.console_view import ConsoleView
 
 
 class GameController:
-    """Main controller for chess client"""
+    """
+    Controller layer - routes messages and coordinates Model/View.
     
-    def __init__(self, host: str = "127.0.0.1", port: int = 2000, logger: Logger = None):
-        self._host = host
-        self._port = port
-        self._logger = logger or Logger()
-        self._client = Client(mode=NetworkMode.TCP, host=host, port=port)
-        self._menu_view = MenuView()
-        self._game_state = ClientGameState()
-        self._running = False
-        self._my_color = None
-        self._single_player = False  # Track if in single-player mode
-        
-        signal.signal(signal.SIGINT, self._signal_handler)
+    Responsibilities:
+    1. Route incoming server messages
+    2. Update Model (ClientContext state + GameModel data)
+    3. Update View (ConsoleView presentation)
+    4. Handle user commands
+    """
     
-    def _signal_handler(self, sig, frame):
-        """Handle Ctrl+C"""
-        self._logger.info("\nDisconnecting...")
-        self._client.disconnect()
-        sys.exit(0)
+    def __init__(self):
+        self._logger = Logger()
+        self.session = None  # Set by Client after creation
+        
+        # Model layer (separate state and data)
+        self.context = ClientContext()  # FSM state management
+        self.model = GameModel()        # Game data + transformations
+        
+        # View layer
+        self.view = ConsoleView()       # Presentation
+        
+    def set_session(self, session):
+        """Set session reference for sending messages"""
+        self.session = session
     
-    def _connect(self) -> bool:
-        """Connect to server"""
-        self._logger.info(f"Connecting to {self._host}:{self._port}...")
+    def route_message(self, response: dict):
+        """
+        Route incoming server response to appropriate handler.
         
-        if not self._client.connect():
-            self._logger.error("Failed to connect to server")
-            return False
+        Args:
+            response: JSON object from server
+        """
+        msg_type = response.get("type", "unknown")
         
-        self._logger.info("Connected to server")
-        return True
-    
-    def _disconnect(self):
-        """Disconnect from server"""
-        self._logger.info("Disconnecting...")
-        self._client.disconnect()
-    
-    # ========================================
-    # INTERACTIVE MODE (Single + Multiplayer)
-    # ========================================
-    
-    def run_interactive_mode(self) -> int:
-        """Run interactive mode with menu"""
-        if not self._connect():
-            return 1
+        self._logger.debug(f"Routing message type: {msg_type}")
         
-        self._running = True
+        # Route to handler based on type
+        handlers = {
+            "session_created": self._handle_session_created,
+            "join_success": self._handle_join_success,
+            "player_joined": self._handle_player_joined, 
+            "game_ready": self._handle_game_ready,
+            "game_started": self._handle_game_started,
+            "move_result": self._handle_move_result,
+            "board_display": self._handle_board_display,
+            "game_over": self._handle_game_over,
+            "error": self._handle_error,
+        }
         
-        try:
-            while self._running:
-                self._update_game_status()
-                self._display_menu()
-                self._handle_user_input()
-        except (KeyboardInterrupt, EOFError):
-            self._logger.info("\nExiting...")
-        finally:
-            self._disconnect()
-        
-        return 0
-    
-    def _update_game_status(self):
-        """Request game status from server"""
-        request = {"command": "get_status"}
-        self._client.send_message(request)
-        
-        response = self._client.receive_message()
-        if response:
-            self._game_state.update(response)
-    
-    def _display_menu(self):
-        """Display menu"""
-        self._menu_view.display_menu(self._game_state, self._my_color)
-    
-    def _handle_user_input(self):
-        """Process user menu choice"""
-        choice = self._menu_view.get_user_choice()
-        
-        # Single-player option
-        if choice == "1" and not self._game_state.white_joined and not self._game_state.black_joined:
-            self._handle_single_player()
-        
-        # Multiplayer join
-        elif choice == "2":
-            if not self._game_state.white_joined:
-                self._handle_join_white()
-            elif not self._game_state.black_joined:
-                self._handle_join_black()
-        
-        elif choice == "3":
-            if not self._game_state.white_joined:
-                self._handle_join_black()
-            elif self._game_state.can_start:
-                self._handle_start_game()
-        
-        # In-game actions
-        elif choice == "4":
-            if self._game_state.in_game:
-                self._handle_make_move()
-            else:
-                self._handle_upload_file()
-        
-        elif choice == "5":
-            if self._game_state.in_game:
-                self._handle_display_board()
-            else:
-                self._handle_exit()
-        
-        elif choice == "6" and self._game_state.in_game:
-            self._handle_end_game()
-        
-        elif choice.lower() in ["exit", "quit", "q"]:
-            self._handle_exit()
-        
+        handler = handlers.get(msg_type)
+        if handler:
+            handler(response)
         else:
-            self._logger.warning("Invalid choice")
+            self._logger.warning(f"Unknown message type: {msg_type}")
     
-    # ========================================
-    # SINGLE-PLAYER MODE
-    # ========================================
+    def _handle_session_created(self, response: dict):
+        """Handle session creation response"""
+        session_id = response.get("session_id")
+        
+        # Update state
+        self.context.on_connected(session_id)
+        
+        # Update view
+        self.view.display_connected(session_id)
+        
+    def _handle_join_success(self, response: dict):
+        """Handle successful join response"""
+        color = response.get("color")
+        status = response.get("status", "")
+        
+        # Update state
+        self.context.on_joined(color)
+        
+        # Update game data
+        self.model.set_player_joined(color)
+        
+        # Update view
+        self.view.display_success(f"Joined as {color}")
+        if status:
+            self.view.display_info(status)
+        
+    def _handle_player_joined(self, response: dict):
+        """Handle notification that another player joined"""
+        color = response.get("color")
+        status = response.get("status", "")
+        
+        # Update game data
+        self.model.set_player_joined(color)
+        
+        # Display notification
+        self.view.display_info(f"\n>>> Player joined as {color} <<<")
+        if status:
+            self.view.display_info(f">>> {status} <<<")
+        
+        if self.model.both_players_joined:
+            # Transition to JOINED state
+            self.context.on_joined()
+            self.view.display_info(">>> Both players ready! You can now start the game. <<<")
+        
+        # Refresh menu to show updated state
+        print()  # Add newline
+        self._show_menu()
+
+    def _handle_game_ready(self, response: dict):
+        """Handle notification that both players are ready"""
+        status = response.get("status", "Both players joined!")
+        white_player = response.get("white_player")
+        black_player = response.get("black_player")
+        
+        # Update model with both players
+        if white_player:
+            self.model.set_player_joined("white")
+        if black_player:
+            self.model.set_player_joined("black")
+        
+        # Display notification
+        self.view.display_info(f"\n>>> {status} <<<")
+        self.view.display_info(">>> Press Enter to refresh menu <<<")
+        
+        # Refresh menu 
+        print() 
+        self._show_menu()
+        print("Enter choice: ", end='', flush=True) 
+        
+    def _handle_game_started(self, response: dict):
+        """Handle game started response"""
+        # Update state
+        self.context.on_game_started()
+        
+        # Initialize game data
+        self.model.start_game()
+        
+        # Update view
+        self.view.display_success("Game started!")
+        
+        # Refresh menu 
+        print() 
+        self._show_menu()
+        print("Enter choice: ", end='', flush=True) 
+        
+    def _handle_move_result(self, response: dict):
+        """Handle move result response"""
+        strike = response.get("strike", {})
+        
+        # Transform data using model
+        description = self.model.build_move_description(strike)
+        suffix = self.model.build_strike_suffix(strike)
+        full_description = description + suffix
+        
+        # Display using view
+        self.view.display_info(full_description)
+        
+        # Update game data
+        self.model.update_turn()
+        
+        # Check for game end
+        if strike.get('is_checkmate'):
+            self.context.on_game_over()
+            self.view.display_game_over("Checkmate")
+        elif strike.get('is_stalemate'):
+            self.context.on_game_over()
+            self.view.display_game_over("Stalemate")
+            
+    def _handle_board_display(self, response: dict):
+        """Handle board display response"""
+        board = response.get('data', {}).get('board', '')
+        self.view.display_board(board)
+        
+    def _handle_game_over(self, response: dict):
+        """Handle game over response"""
+        result = response.get('result', 'Unknown')
+        
+        # Update state
+        self.context.on_game_over()
+        
+        # Display result
+        self.view.display_game_over(result)
+        
+    def _handle_error(self, response: dict):
+        """Handle error response"""
+        error = response.get('error', 'Unknown error')
+        self.view.display_error(error)
     
-    def _handle_single_player(self):
-        """Start single-player game (control both sides)"""
-        self._logger.info("Starting single-player game...")
-        self._single_player = True
+    def send_join(self, color: str):
+        """Send join game command"""
+        if not self.context.can_join():
+            self.view.display_error("Cannot join in current state")
+            return
+            
+        self.session.send({
+            "command": "join_game",
+            "color": color
+        })
+        self._logger.info(f"Sent join command: {color}")
         
-        # Join as both White and Black
-        # First join as White
-        request = {"command": "join_game", "color": "white"}
-        self._client.send_message(request)
-        response = self._client.receive_message()
-        
-        if not response or response.get("type") != "join_success":
-            self._logger.error("Failed to join as White")
-            self._single_player = False
+    def send_start(self):
+        """Send start game command"""
+        if not self.context.can_start():
+            self.view.display_error("Cannot start - not in JOINED state")
             return
         
-        self._logger.info("✓ Joined as White")
-        
-        # Then join as Black (server needs to allow this for single-player)
-        request = {"command": "join_game", "color": "black"}
-        self._client.send_message(request)
-        response = self._client.receive_message()
-        
-        if not response or response.get("type") != "join_success":
-            self._logger.error("Failed to join as Black")
-            self._single_player = False
+        if not self.model.both_players_joined:
+            self.view.display_warning("Cannot start - waiting for both players")
             return
+            
+        self.session.send({
+            "command": "start_game"
+        })
+        self._logger.info("Sent start game command")
         
-        self._logger.info("✓ Joined as Black")
-        self._my_color = "both"  # Special marker for single-player
-        
-        # Auto-start the game
-        request = {"command": "start_game"}
-        self._client.send_message(request)
-        response = self._client.receive_message()
-        
-        if response and response.get("type") == "game_started":
-            self._logger.info("✓ Single-player game started!")
-        else:
-            self._logger.error("Failed to start game")
-            self._single_player = False
-    
-    # ========================================
-    # MULTIPLAYER MODE
-    # ========================================
-    
-    def _handle_join_white(self):
-        """Join as White player"""
-        if self._game_state.white_joined:
-            self._logger.warning("White slot already taken")
+    def send_move(self, from_sq: str, to_sq: str):
+        """Send move command"""
+        if not self.context.can_move():
+            self.view.display_error("Cannot move in current state")
             return
-        
-        request = {"command": "join_game", "color": "white"}
-        self._client.send_message(request)
-        
-        response = self._client.receive_message()
-        if response and response.get("type") == "join_success":
-            self._my_color = "white"
-            self._logger.info("✓ Joined as White")
-        else:
-            error = response.get("error", "Unknown error") if response else "No response"
-            self._logger.error(f"Failed to join: {error}")
-    
-    def _handle_join_black(self):
-        """Join as Black player"""
-        if self._game_state.black_joined:
-            self._logger.warning("Black slot already taken")
-            return
-        
-        request = {"command": "join_game", "color": "black"}
-        self._client.send_message(request)
-        
-        response = self._client.receive_message()
-        if response and response.get("type") == "join_success":
-            self._my_color = "black"
-            self._logger.info("✓ Joined as Black")
-        else:
-            error = response.get("error", "Unknown error") if response else "No response"
-            self._logger.error(f"Failed to join: {error}")
-    
-    def _handle_start_game(self):
-        """Start the game"""
-        if not self._game_state.can_start:
-            self._logger.warning("Cannot start game yet")
-            return
-        
-        request = {"command": "start_game"}
-        self._client.send_message(request)
-        
-        response = self._client.receive_message()
-        if response and response.get("type") == "game_started":
-            self._logger.info("✓ Game started!")
-        else:
-            error = response.get("error", "Unknown error") if response else "No response"
-            self._logger.error(f"Failed to start: {error}")
-    
-    def _handle_make_move(self):
-        """Make a chess move"""
-        if not self._game_state.in_game:
-            self._logger.warning("Game not started")
-            return
-        
-        # In single-player, allow moves anytime
-        # In multiplayer, check turn
-        if not self._single_player:
-            if self._game_state.current_turn and self._game_state.current_turn != self._my_color:
-                self._logger.warning(f"Not your turn (waiting for {self._game_state.current_turn})")
-                return
-        
-        from_sq, to_sq = self._menu_view.get_move_input()
-        if not from_sq or not to_sq:
-            return
-        
-        request = {
+            
+        self.session.send({
             "command": "make_move",
             "from": from_sq,
             "to": to_sq
+        })
+        self._logger.info(f"Sent move: {from_sq}-{to_sq}")
+        
+    def send_display_board(self):
+        """Send display board command"""
+        if not self.context.can_display_board():
+            self.view.display_error("Cannot display board in current state")
+            return
+            
+        self.session.send({
+            "command": "display_board"
+        })
+        self._logger.info("Sent display board command")
+        
+    def send_end_game(self):
+        """Send end game command"""
+        self.session.send({
+            "command": "end_game"
+        })
+        self._logger.info("Sent end game command")
+    
+    def run_interactive_mode(self):
+        """
+        Interactive mode with state-aware menu.
+        Runs main game loop.
+        """
+        import time
+
+        # Wait for connection (session_created message)
+        while self.context.state == ClientState.DISCONNECTED:
+            time.sleep(0.1)
+        
+        self._logger.info("Starting interactive mode")
+        
+        # Main game loop
+        while True:
+            # Show menu (view queries model/context)
+            self._show_menu()
+            
+            # Get user input
+            choice = self.view.get_user_choice()
+            
+            # Handle quit
+            if choice.lower() in ["quit", "q", "exit"]:
+                if self.view.confirm_action("Are you sure you want to quit?"):
+                    break
+                continue
+                
+            # Handle choice
+            self._handle_menu_choice(choice)
+            
+            # Small delay for response processing
+            time.sleep(0.1)
+    
+    def _show_menu(self):
+        """Display state-aware menu"""
+        state = self.context.state
+        
+        # Build menu info from model/context
+        menu_info = {
+            "state_name": self.context.get_state_name(),
+            "player_color": self.context.player_color,
+            "session_id": self.context.session_id,
+            "current_turn": self.model.current_turn,
+            "white_joined": self.model.white_joined,
+            "black_joined": self.model.black_joined,
+            "move_count": self.model.move_count,
         }
-        self._client.send_message(request)
         
-        response = self._client.receive_message()
-        if response:
-            if response.get("type") == "error":
-                self._logger.error(f"Move failed: {response.get('error')}")
-            else:
-                self._logger.info("✓ Move applied!")
-                self._menu_view.display_move_result(response)
+        # Display menu using view
+        self.view.display_menu(menu_info)
     
-    def _handle_display_board(self):
-        """Display current board state"""
-        request = {"command": "display_board"}
-        self._client.send_message(request)
+    def _handle_menu_choice(self, choice: str):
+        """Handle user menu choice based on current state"""
+        state = self.context.state
         
-        response = self._client.receive_message()
-        if response:
-            # Display board from response
-            print("\n" + "="*60)
-            print("CURRENT BOARD:")
-            print("="*60)
-            # TODO: Format and display board
-            print(response)
-    
-    def _handle_end_game(self):
-        """End current game"""
-        request = {"command": "end_game"}
-        self._client.send_message(request)
-        
-        response = self._client.receive_message()
-        if response:
-            self._logger.info("Game ended")
-            self._my_color = None
-            self._single_player = False
-    
-    def _handle_exit(self):
-        """Exit the client"""
-        self._logger.info("Exiting...")
-        self._running = False
-    
-    # ========================================
-    # FILE UPLOAD MODE
-    # ========================================
-    
-    def _handle_upload_file(self):
-        """Upload a game file"""
-        filepath = input("Enter game file path: ").strip()
-        if not filepath:
-            return
-        
-        path = Path(filepath)
-        if not path.exists():
-            self._logger.error(f"File not found: {filepath}")
-            return
-        
-        self.run_file_mode(path)
-    
-    def run_file_mode(self, filepath: Path, chunk_size: int = 4096) -> int:
-        """Upload and play a game file"""
         try:
-            file_size = filepath.stat().st_size
-            filename = filepath.name
+            # STATE: CONNECTED (can join)
+            if state == ClientState.CONNECTED:
+                # Build available options dynamically
+                white_available = not self.model.white_joined
+                black_available = not self.model.black_joined
+                both_available = white_available and black_available
+                
+                # Map choices to actions based on what's available
+                option_num = 1
+                actions = {}
+                
+                if both_available:
+                    actions[str(option_num)] = ("single", None)
+                    option_num += 1
+                
+                if white_available:
+                    actions[str(option_num)] = ("join", "white")
+                    option_num += 1
+                
+                if black_available:
+                    actions[str(option_num)] = ("join", "black")
+                    option_num += 1
+                
+                actions[str(option_num)] = ("upload", None)
+                
+                # Execute chosen action
+                if choice in actions:
+                    action_type, color = actions[choice]
+                    
+                    if action_type == "single":
+                        self.send_join("white")
+                        self.send_join("black")
+                        self.view.display_info("Single-player mode: You control both sides")
+                        
+                    elif action_type == "join":
+                        self.send_join(color)
+                        
+                    elif action_type == "upload":
+                        self.view.display_warning("File upload not yet implemented")
+                else:
+                    self.view.display_error("Invalid choice")
+                        
+            # STATE: JOINED (can start)
+            elif state == ClientState.JOINED:
+                if choice == "1":
+                    self.send_start()
+                else:
+                    self.view.display_error("Invalid choice")
+                        
+            # STATE: PLAYING (can move/display)
+            elif state == ClientState.PLAYING:
+                if choice == "1":
+                    from_sq, to_sq = self.view.get_move_input()
+                    if from_sq and to_sq:
+                        self.send_move(from_sq, to_sq)
+                    else:
+                        self.view.display_error("Invalid move format")
+                elif choice == "2":
+                    self.send_display_board()
+                elif choice == "3":
+                    if self.view.confirm_action("End the game?"):
+                        self.send_end_game()
+                else:
+                    self.view.display_error("Invalid choice")
+                        
+            # STATE: GAME_OVER
+            elif state == ClientState.GAME_OVER:
+                self.view.display_info("Game over. Type 'quit' to exit.")
+                    
+        except Exception as e:
+            self._logger.error(f"Error handling choice: {e}")
+            self.view.display_error(f"Error: {e}")
+    
+    def run_file_mode(self, 
+        file_path: Path, 
+        chunk_size: int = 4096):
+        """
+        File upload mode - upload and play game from file.
+        
+        Args:
+            file_path: Path to game file
+        """
+        import time
+        
+        try:
+            file_size = file_path.stat().st_size
+            filename = file_path.name
             chunks_total = (file_size + chunk_size - 1) // chunk_size
             
             self._logger.info(f"Uploading {filename} ({file_size} bytes)")
             
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 chunk_current = 0
                 
                 while True:
@@ -335,7 +421,7 @@ class GameController:
                         "data": chunk_data
                     }
                     
-                    if not self._client.send_message(message):
+                    if not self._client.send(message):
                         self._logger.error(f"Failed to send chunk {chunk_current}")
                         return 1
                     
@@ -345,7 +431,7 @@ class GameController:
                     
                     time.sleep(0.01)
             
-            self._logger.info(f"✓ Upload complete: {filename}")
+            self._logger.info(f"Upload complete: {filename}")
             return 0
             
         except Exception as e:
