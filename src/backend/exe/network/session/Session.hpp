@@ -2,8 +2,10 @@
 
 #include <atomic>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 #include "ITransport.hpp"
 #include "MessageRouter.hpp"
@@ -30,9 +32,10 @@ class Session {
     ~Session();
 
     void start();  ///< Start receiving messages
-    // void send(const nlohmann::json& msg);  ///< Send JSON over transport
     void send(const std::string& msg);  ///< Send JSON over transport
     void close();                       ///< Shutdown transport + thread
+    
+    std::string getSessionId() const { return session_id_; }  ///< Get unique session ID
 
    private:
     void onReceive(
@@ -42,11 +45,15 @@ class Session {
                                                       /// the controller layer.
     void handleFileUpload(const nlohmann::json& msg);
     void processGameFile(const std::string& content, const std::string& filename);
+    
+    static std::string generateSessionId();  ///< Generate unique session ID
 
     std::unique_ptr<MessageRouter> router;
     std::unique_ptr<ITransport> transport;
     std::atomic<bool> active{false};  /// Useful to avoid passing messages in callback functions during shutdown.
-    std::string buffer;  /// Buffer to acumulate message fragments
+    std::string buffer;  /// Buffer to accumulate message fragments
+    std::string session_id_;  ///< Unique identifier for this session
+    Logger& logger;
     
     // Track ongoing file uploads
     std::unordered_map<std::string, FileUploadState> file_uploads_;

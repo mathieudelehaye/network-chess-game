@@ -54,6 +54,7 @@ target_include_directories(${EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${CMAKE_CURRENT_SOURCE_DIR}/models/parser
     ${CMAKE_CURRENT_SOURCE_DIR}/models/game
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/game/state
     ${CMAKE_CURRENT_SOURCE_DIR}/views
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/network/session

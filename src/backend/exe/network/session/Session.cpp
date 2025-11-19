@@ -1,7 +1,6 @@
 #include "Session.hpp"
 
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 #include "Logger.hpp"
 #include "MessageRouter.hpp"
@@ -9,15 +8,23 @@
 using json = nlohmann::json;
 
 Session::Session(std::unique_ptr<ITransport> t)
-    : transport(std::move(t)), router(std::make_unique<MessageRouter>()) {}
+    : router(std::make_unique<MessageRouter>()),
+      transport(std::move(t)),   
+      session_id_(generateSessionId()),
+      logger(Logger::instance()) {
+    
+    logger.info("Session created: " + session_id_);
+}
 
 Session::~Session() {
     close();
+    logger.info("Session destroyed: " + session_id_);
 }
 
 void Session::start() {
     active = true;
     transport->start([this](const std::string& payload) { onReceive(payload); });
+    logger.info("Session started: " + session_id_);
 }
 
 void Session::onReceive(const std::string& raw) {
@@ -39,53 +46,28 @@ void Session::onReceive(const std::string& raw) {
     }
 }
 
-void Session::handleMessage(const std::string& json_str) {
-    if (!active)
-        return;
-
-    auto& logger = Logger::instance();
-    logger.trace("Received: " + json_str);
-
+void Session::handleMessage(const std::string& message) {
     try {
-        // Parse JSON and check its correct syntax
-        json msg = json::parse(json_str);
-
+        json msg = json::parse(message);
+        
         // Check if this is a file upload chunk
-        if (msg.contains("command") && msg["command"] == "upload_game") {
+        if (msg.contains("type") && msg["type"] == "file_upload") {
             handleFileUpload(msg);
             return;
         }
-
-        // Otherwise, route normally
-        std::string response = router->route(msg);
-
-        // Send response back
+        
+        // Route with session ID
+        std::string response = router->route(msg, session_id_);
+        
         if (!response.empty()) {
-            send(response);
-            logger.trace("Sent response: " + response);
+            transport->send(response);
         }
-
     } catch (const json::exception& e) {
-        logger.error("Invalid JSON: " + std::string(e.what()));
-
-        json error_response;
-        error_response["error"] = "Invalid JSON format";
-        send(error_response.dump());
-
-    } catch (const std::exception& e) {
-        logger.error("Internal error: " +
-                     std::string(e.what()));  // server logs internal error detail
-
-        json error_response;
-        error_response["error"] =
-            "Internal server error";  // then sends a generic error message to the client
-        send(error_response.dump());
+        logger.error("JSON error: " + std::string(e.what()));
     }
 }
 
 void Session::handleFileUpload(const nlohmann::json& msg) {
-    auto& logger = Logger::instance();
-
     try {
         // Extract metadata
         auto metadata = msg["metadata"];
@@ -155,41 +137,21 @@ void Session::handleFileUpload(const nlohmann::json& msg) {
 }
 
 void Session::processGameFile(const std::string& content, const std::string& filename) {
-    auto& logger = Logger::instance();
-    logger.info("Processing game file: " + filename);
-
-    try {
-        // Create a temporary JSON message for the router
-        json game_msg;
-        game_msg["command"] = "play_game";
-        game_msg["content"] = content;
-        game_msg["filename"] = filename;
-
-        // Route to game controller for processing
-        std::string response = router->route(game_msg);
-
-        // Send final response with all moves
-        if (!response.empty()) {
-            send(response);
-            logger.info("Game file processed and response sent");
-        }
-
-    } catch (const std::exception& e) {
-        logger.error("Error processing game file: " + std::string(e.what()));
-
-        json error_response;
-        error_response["type"] = "error";
-        error_response["error"] = "Failed to process game file";
-        error_response["filename"] = filename;
-        send(error_response.dump());
+    json game_msg;
+    game_msg["command"] = "play_game";
+    game_msg["content"] = content;
+    game_msg["filename"] = filename;
+    
+    std::string response = router->route(game_msg, session_id_);
+    
+    if (!response.empty()) {
+        transport->send(response);
     }
 }
 
-// void Session::send(const nlohmann::json& msg) {
 void Session::send(const std::string& msg) {
     if (!active)
         return;
-    // transport->send(msg.dump() + "\n");
     transport->send(msg + "\n");
 }
 
@@ -197,5 +159,11 @@ void Session::close() {
     if (!active.exchange(false))
         return;
 
-    transport->close();  // shuts down socket
+    transport->close();
+    logger.info("Session closed: " + session_id_);
+}
+
+std::string Session::generateSessionId() {
+    static std::atomic<uint64_t> counter{0};
+    return "session_" + std::to_string(++counter);
 }

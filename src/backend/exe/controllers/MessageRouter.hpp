@@ -4,45 +4,88 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-#include "GameController.hpp"
+#include "GameContext.hpp"
 
 /**
- * @brief Routes JSON messages to appropriate handlers
+ * @brief Routes JSON messages to appropriate GameContext handlers
  *
- * The controller layer extracts commands from messages and delegates them
- * to model layer (parser, game logic, etc.)
+ * All commands (single-player, multiplayer, file uploads) go through
+ * the State Pattern FSM in GameContext
  */
 class MessageRouter {
-   public:
+public:
     MessageRouter();
     ~MessageRouter() = default;
 
     /**
      * @brief Route a JSON message to the appropriate handler
      * @param msg The parsed JSON message
-     * @return JSON response as string (empty if no response needed)
-     */
-    std::string route(const nlohmann::json& msg);
-
-   private:
-    /**
-     * @brief Handle a `move` command
-     * @param move The move string
+     * @param session_id Unique identifier for the client session
      * @return JSON response as string
      */
-    std::string handleMove(const std::string& move);
+    std::string route(const nlohmann::json& msg, const std::string& session_id);
 
+private:
     /**
-     * @brief Handle a `display_board` command
-     * @return JSON response as string
+     * @brief Handle join_game command
+     * @param session_id Client session ID
+     * @param color "white" or "black"
+     * @return JSON response
+     */
+    std::string handleJoinGame(const std::string& session_id, const std::string& color);
+    
+    /**
+     * @brief Handle start_game command
+     * @param session_id Client session ID
+     * @return JSON response
+     */
+    std::string handleStartGame(const std::string& session_id);
+    
+    /**
+     * @brief Handle make_move command
+     * @param session_id Client session ID
+     * @param from Starting square (e.g., "e2")
+     * @param to Target square (e.g., "e4")
+     * @return JSON response
+     */
+    std::string handleMakeMove(const std::string& session_id, 
+                               const std::string& from, 
+                               const std::string& to);
+    
+    /**
+     * @brief Handle end_game command
+     * @param session_id Client session ID
+     * @return JSON response
+     */
+    std::string handleEndGame(const std::string& session_id);
+    
+    /**
+     * @brief Handle get_status command
+     * @return JSON response with game state
+     */
+    std::string handleGetStatus();
+    
+    /**
+     * @brief Handle display_board command
+     * @return JSON response
      */
     std::string handleDisplayBoard();
-
+    
     /**
-     * @brief Handle a `play_game` command
-     * @return JSON response as string
+     * @brief Handle upload_game command (file upload)
+     * @param content Game file content
+     * @param filename Original filename
+     * @return JSON response
      */
-    std::string handlePlayGame(const std::string& content, const std::string& filename);
+    std::string handleUploadGame(const std::string& content, const std::string& filename);
+    
+    /**
+     * @brief Parse and handle simple move notation (e.g., "e2-e4")
+     * @param move The move string
+     * @return JSON response
+     */
+    std::string handleSimpleMove(const std::string& move);
 
-    std::unique_ptr<GameController> gameController_;
+    // State machine for all game modes
+    std::unique_ptr<GameContext> game_context_;
 };
