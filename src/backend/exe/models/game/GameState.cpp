@@ -95,6 +95,16 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
         return buildError("Game not initialised");
     }
 
+    // Determine which color is making the move
+    std::string player_color;
+    if (player_id == context->getWhitePlayer()) {
+        player_color = "white";
+    } else if (player_id == context->getBlackPlayer()) {
+        player_color = "black";
+    } else {
+        return buildError("Invalid player");
+    }
+
     // Apply move to model
     auto strike_data = game->applyMove(from, to);
     if (!strike_data) {
@@ -105,11 +115,16 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
     json response;
     response["type"] = "move_result";
     response["success"] = true;
-    response["strike"] = {{"from", strike_data->case_src},
-                          {"to", strike_data->case_dest},
+    response["strike"] = {{"case_src", strike_data->case_src},
+                          {"case_dest", strike_data->case_dest},
                           {"piece", strike_data->piece},
-                          {"strike_number", strike_data->strike_number},
-                          {"capture", strike_data->is_capture},
+                          {"color", player_color},
+                          {"strike_number",strike_data->strike_number},
+                          {"is_capture", strike_data->is_capture},
+                          {"captured_piece", strike_data->captured_piece},
+                          {"captured_color", strike_data->captured_color},
+                          {"is_castling", strike_data->is_castling},
+                          {"castling_type", strike_data->castling_type},
                           {"check", strike_data->is_check},
                           {"checkmate", strike_data->is_checkmate},
                           {"stalemate", strike_data->is_stalemate}};
@@ -129,7 +144,7 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
     // Broadcast move to ALL players
     json game_end_broadcast = {
         {"type", "move_result"}, {"success", true}, {"strike", response["strike"]}};
-    context->broadcastToAll(game_end_broadcast, player_id);
+    context->broadcastToAll(player_id, game_end_broadcast);
 
     return response;
 }
