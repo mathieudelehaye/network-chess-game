@@ -24,7 +24,7 @@ class ITransport {
      * mechanism.
      */
     using ReceiveCallback = std::function<void(const std::string&)>;
-    
+
     using CloseCallback = std::function<void()>;
 
     /// Virtual destructor

@@ -10,14 +10,30 @@ GameContext::GameContext()
     logger.info("GameContext initialised");
 }
 
+void GameContext::setBroadcastCallback(BroadcastCallback callback) {
+    broadcast_callback_ = std::move(callback);
+}
+
+void GameContext::broadcastToAll(const std::string& session_id, const json& message) {
+    if (broadcast_callback_) {
+        broadcast_callback_(session_id, message, true);
+    }
+}
+
+void GameContext::broadcastToOthers(const std::string& session_id, const json& message) {
+    if (broadcast_callback_) {
+        broadcast_callback_(session_id, message, false);
+    }
+}
+
 json GameContext::resetGame(const std::string& player_id) {
     auto& logger = Logger::instance();
     logger.info("Game reset requested by: " + (player_id.empty() ? "system" : player_id));
-    
+
     // Clear players
     setWhitePlayer("");
     setBlackPlayer("");
-    
+
     // Reset chess game
     chess_game_.reset();
 

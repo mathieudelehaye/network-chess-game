@@ -13,32 +13,18 @@
  *
  * Owns the ChessGame instance and coordinates state transitions
  */
+
+using BroadcastCallback = std::function<void(const std::string& originating_session_id,
+                                             const json& message, bool to_all)>;
+
 class GameContext {
    public:
     GameContext();
     ~GameContext() = default;
 
-    using BroadcastCallback = std::function<void(
-        const std::string& originating_session_id,
-        const json& message, 
-        bool to_all
-    )>;
-
-    void setBroadcastCallback(BroadcastCallback callback) {
-        broadcast_callback_ = std::move(callback);
-    }
-
-    void broadcastToAll(const std::string& session_id, const json& message) {
-        if (broadcast_callback_) {
-            broadcast_callback_(session_id, message, true);
-        }
-    }
-
-    void broadcastToOthers(const std::string& session_id, const json& message) {
-        if (broadcast_callback_) {
-            broadcast_callback_(session_id, message, false);
-        }
-    }
+    void setBroadcastCallback(BroadcastCallback callback);
+    void broadcastToAll(const std::string& session_id, const json& message);
+    void broadcastToOthers(const std::string& session_id, const json& message);
 
     json resetGame(const std::string& player_id);
 
@@ -63,6 +49,8 @@ class GameContext {
     ChessGame* getChessGame() { return chess_game_.get(); }
     const ChessGame* getChessGame() const { return chess_game_.get(); }
 
+    std::mutex& getMutex() { return mutex_; }
+
     // Request handlers (delegate to current state)
     nlohmann::json handleJoinRequest(const std::string& player_id, const std::string& color);
     nlohmann::json handleStartRequest(const std::string& player_id);
@@ -77,4 +65,5 @@ class GameContext {
     std::string white_player_id_;
     std::string black_player_id_;
     BroadcastCallback broadcast_callback_;
+    mutable std::mutex mutex_;
 };

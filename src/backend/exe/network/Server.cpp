@@ -7,12 +7,13 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 
-#include "utils/Logger.hpp"
+#include "GameController.hpp"
+#include "Logger.hpp"
 
 using json = nlohmann::json;
 
 Server::Server(NetworkMode mode, const std::string& ip, int port)
-    : network(mode), shared_game_context_(std::make_shared<GameContext>()) {
+    : network(mode), shared_controller_(std::make_shared<GameController>()) {
     // Create socket based on transport mode
     switch (network) {
         case NetworkMode::IPC:
@@ -25,11 +26,11 @@ Server::Server(NetworkMode mode, const std::string& ip, int port)
             break;
     }
 
-    setupGameContextBroadcast();
+    setupBroadcastCallback();
 }
 
-void Server::setupGameContextBroadcast() {
-    shared_game_context_->setBroadcastCallback(
+void Server::setupBroadcastCallback() {
+    shared_controller_->setBroadcastCallback(
         [this](const std::string& originating_session_id, const json& msg, bool to_all) {
             std::string message = msg.dump();
 
@@ -86,7 +87,7 @@ void Server::stop() {
         s->close();
 
     if (server_fd >= 0)
-        ::shutdown(server_fd, SHUT_RDWR);
+        shutdown(server_fd, SHUT_RDWR);
 }
 
 void Server::acceptLoop(std::stop_token st) {
@@ -98,25 +99,24 @@ void Server::acceptLoop(std::stop_token st) {
         // If no connection request, we use that time to clean up sessions
         if (client_fd < 0) {
             cleanupDeadSessions();
-            continue;  
+            continue;
         }
 
         logger.debug("Client connected");
 
-        // Create a transport
+        // Create a unique transport layer for this session
         auto transport = TransportFactory::create(client_fd, network);
 
-        // Create a session to own the transport with multiple clients
-        auto session = std::make_shared<Session>(std::move(transport), shared_game_context_);
+        // Create a session with its own transport and the shared controller
+        auto session = std::make_shared<Session>(std::move(transport), shared_controller_);
 
         {
-            // Need a mutex to avoid adding a new session while broadcasting to
-            // the existing ones.
+            // Add the session to the list of active sessions (thread-safe)
             std::lock_guard<std::mutex> lock(sessions_mutex_);
             sessions.push_back(session);
         }
 
-        // Start the session
+        // Start the session (e.g., begin receiving messages)
         session->start();
     }
 }
@@ -152,9 +152,9 @@ void Server::connectIPC() {
 
 void Server::cleanupDeadSessions() {
     std::lock_guard<std::mutex> lock(sessions_mutex_);
-    
+
     auto& logger = Logger::instance();
-    
+
     // Remove sessions that are no longer active
     auto it = sessions.begin();
     while (it != sessions.end()) {

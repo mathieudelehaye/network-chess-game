@@ -6,51 +6,20 @@
 
 using json = nlohmann::json;
 
-GameController::GameController(std::shared_ptr<GameContext> context)
-    : game_context_(std::move(context))  // each controller moves a copy of the same game context
-{
+GameController::GameController() : game_context_(std::make_unique<GameContext>()) {
     auto& logger = Logger::instance();
     logger.debug("GameController initialised");
 }
 
-std::string GameController::routeMessage(
-    const std::string& content,
-    const std::string& session_id) {
-
+std::string GameController::routeMessage(const std::string& content,
+                                         const std::string& session_id) {
     auto& logger = Logger::instance();
 
     // Parse application message (should be JSON)
     try {
         json msg = json::parse(content);
 
-        logger.debug("Routing message for session: " + session_id);
-
-        // File upload chunks
-        if (msg.contains("type") && msg["type"] == "file_upload") {
-            return handleFileUploadChunk(msg, session_id);
-        }
-
-        // Command-based routing
-        if (msg.contains("command")) {
-            std::string command = msg["command"];
-
-            if (command == "join_game") {
-                return handleJoinGame(session_id, msg["color"]);
-            } else if (command == "start_game") {
-                return handleStartGame(session_id);
-            } else if (command == "make_move") {
-                return handleMakeMove(session_id, msg["from"], msg["to"]);
-            } else if (command == "end_game") {
-                return handleEndGame(session_id);
-            } else if (command == "display_board") {
-                return handleDisplayBoard();
-            }
-        }
-
-        logger.warning("Unknown message type");
-        json error;
-        error["error"] = "Unknown command";
-        return error.dump();
+        return handleMessage(session_id, msg);
 
     } catch (const json::parse_error& e) {
         logger.error("JSON parse error: " + std::string(e.what()));
@@ -84,32 +53,74 @@ void GameController::routeDisconnect(const std::string& session_id) {
 
     auto& logger = Logger::instance();
     logger.debug("Handling disconnect for session: " + session_id);
-    
-    // Check if this session was a player
+
     std::string disconnected_color;
-    
-    if (game_context_->getWhitePlayer() == session_id) {
-        disconnected_color = "white";
-        game_context_->setWhitePlayer("");  // Clear white player
-    } else if (game_context_->getBlackPlayer() == session_id) {
-        disconnected_color = "black";
-        game_context_->setBlackPlayer("");  // Clear black player
+
+    // Thread-safe instruction block
+    {
+        // Lock the game context
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
+
+        // Check if this session was a player
+        if (game_context_->getWhitePlayer() == session_id) {
+            disconnected_color = "white";
+            game_context_->setWhitePlayer("");  // Clear white player
+        } else if (game_context_->getBlackPlayer() == session_id) {
+            disconnected_color = "black";
+            game_context_->setBlackPlayer("");  // Clear black player
+        }
+
+        logger.info(disconnected_color + " player disconnected. Resetting game");
+        game_context_->resetGame("");
     }
-    
-    logger.info(disconnected_color + " player disconnected. Resetting game");
-    game_context_->resetGame("");
-    
+
     if (!disconnected_color.empty()) {
         logger.debug("Notifying other players that game reset");
-                
+
         // Broadcast reset to other players
-        json reset_broadcast = {
-            {"type", "game_reset"},
-            {"reason", "all_players_disconnected"},
-            {"status", "Waiting for players..."}
-        };
+        json reset_broadcast = {{"type", "game_reset"},
+                                {"reason", "all_players_disconnected"},
+                                {"status", "Waiting for players..."}};
         game_context_->broadcastToOthers(session_id, reset_broadcast);
     }
+}
+
+void GameController::setBroadcastCallback(BroadcastCallback callback) {
+    if (game_context_) {
+        game_context_->setBroadcastCallback(std::move(callback));
+    }
+}
+
+std::string GameController::handleMessage(const std::string& session_id, const json& msg) {
+    auto& logger = Logger::instance();
+    logger.debug("Routing message for session: " + session_id);
+
+    // File upload chunks
+    if (msg.contains("type") && msg["type"] == "file_upload") {
+        return handleFileUploadChunk(msg, session_id);
+    }
+
+    // Command-based routing
+    if (msg.contains("command")) {
+        std::string command = msg["command"];
+
+        if (command == "join_game") {
+            return handleJoinGame(session_id, msg["color"]);
+        } else if (command == "start_game") {
+            return handleStartGame(session_id);
+        } else if (command == "make_move") {
+            return handleMakeMove(session_id, msg["from"], msg["to"]);
+        } else if (command == "end_game") {
+            return handleEndGame(session_id);
+        } else if (command == "display_board") {
+            return handleDisplayBoard();
+        }
+    }
+
+    logger.warning("Unknown message type");
+    json error;
+    error["error"] = "Unknown command";
+    return error.dump();
 }
 
 std::string GameController::handleJoinGame(const std::string& session_id,
@@ -117,7 +128,15 @@ std::string GameController::handleJoinGame(const std::string& session_id,
     auto& logger = Logger::instance();
     logger.info("Session " + session_id + " joining as " + color);
 
-    json response = game_context_->handleJoinRequest(session_id, color);
+    json response;
+
+    // Thread-safe instruction block
+    {
+        // Lock the game context
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
+        response = game_context_->handleJoinRequest(session_id, color);
+    }
+
     return response.dump();
 }
 
@@ -125,7 +144,14 @@ std::string GameController::handleStartGame(const std::string& session_id) {
     auto& logger = Logger::instance();
     logger.info("Session " + session_id + " starting game");
 
-    json response = game_context_->handleStartRequest(session_id);
+    json response;
+
+    // Thread-safe instruction block
+    {
+        // Lock the game context
+        response = game_context_->handleStartRequest(session_id);
+    }
+
     return response.dump();
 }
 
@@ -134,7 +160,14 @@ std::string GameController::handleMakeMove(const std::string& session_id, const 
     auto& logger = Logger::instance();
     logger.info("Session " + session_id + " move: " + from + "-" + to);
 
-    json response = game_context_->handleMoveRequest(session_id, from, to);
+    json response;
+
+    // Thread-safe instruction block
+    {
+        // Lock the game context
+        response = game_context_->handleMoveRequest(session_id, from, to);
+    }
+
     return response.dump();
 }
 
@@ -142,7 +175,14 @@ std::string GameController::handleEndGame(const std::string& session_id) {
     auto& logger = Logger::instance();
     logger.info("Session " + session_id + " ending game");
 
-    json response = game_context_->handleEndRequest(session_id);
+    json response;
+
+    // Thread-safe instruction block
+    {
+        // Lock the game context
+        response = game_context_->handleEndRequest(session_id);
+    }
+
     return response.dump();
 }
 
@@ -150,7 +190,14 @@ std::string GameController::handleDisplayBoard() {
     auto& logger = Logger::instance();
     logger.debug("Displaying board");
 
-    json response = game_context_->handleDisplayBoard();  // ← Delegate to context
+    json response;
+
+    // Thread-safe instruction block
+    {
+        // Lock the game context
+        response = game_context_->handleDisplayBoard();  // ← Delegate to context
+    }
+
     return response.dump();
 }
 

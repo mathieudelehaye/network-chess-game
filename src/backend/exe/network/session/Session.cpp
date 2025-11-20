@@ -2,14 +2,14 @@
 
 #include <iostream>
 #include <string>
+
 #include "GameController.hpp"
 #include "Logger.hpp"
 
-Session::Session(std::unique_ptr<ITransport> transport, std::shared_ptr<GameContext> game_context)
+Session::Session(std::unique_ptr<ITransport> transport, std::shared_ptr<GameController> controller)
     : transport(std::move(transport)),
-      controller(std::make_unique<GameController>(game_context)),
+      controller(std::move(controller)),
       session_id_(generateSessionId()) {
-
     auto& logger = Logger::instance();
     logger.info("Session created: " + session_id_);
 }
@@ -20,8 +20,8 @@ Session::~Session() {
 
 void Session::start() {
     // Required since nothing prevents start() from being called twice for the same instance.
-    if (active.exchange(true)) 
-        return; 
+    if (active.exchange(true))
+        return;
 
     auto& logger = Logger::instance();
     logger.info("Session started: " + session_id_);
@@ -48,7 +48,7 @@ void Session::start() {
 void Session::onReceive(const std::string& raw) {
     // Required to prevent callback function from being called during shutdown.
     if (!active)
-        return; 
+        return;
 
     // Accumulate data into buffer
     buffer += raw;

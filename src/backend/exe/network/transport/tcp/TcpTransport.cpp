@@ -1,9 +1,11 @@
 #include "TcpTransport.hpp"
 
-#include <cstring>
-#include <iostream>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <cstring>
+#include <iostream>
+
 #include "Logger.hpp"
 
 /**
@@ -29,8 +31,8 @@ void TcpTransport::setCloseCallback(CloseCallback onClose) {
  */
 void TcpTransport::start(ReceiveCallback onReceive) {
     // Required since nothing prevents start() from being called twice for the same instance.
-    if (running.exchange(true)) 
-        return; 
+    if (running.exchange(true))
+        return;
 
     auto& logger = Logger::instance();
     logger.trace("Starting reader thread for fd " + std::to_string(fd));
@@ -38,7 +40,7 @@ void TcpTransport::start(ReceiveCallback onReceive) {
     readerThread = std::jthread([this, onReceive](std::stop_token st) {
         auto& logger = Logger::instance();
         logger.trace("Reader thread started for fd " + std::to_string(fd));
-        
+
         char buffer[1024];
         bool connection_closed_by_peer = false;
 
@@ -52,7 +54,8 @@ void TcpTransport::start(ReceiveCallback onReceive) {
                     logger.trace("Client disconnected (EOF) on fd " + std::to_string(fd));
                     connection_closed_by_peer = true;
                 } else {
-                    logger.error("Read error on fd " + std::to_string(fd) + ": " + std::string(strerror(errno)));
+                    logger.error("Read error on fd " + std::to_string(fd) + ": " +
+                                 std::string(strerror(errno)));
                     connection_closed_by_peer = true;
                 }
                 running = false;
@@ -68,7 +71,7 @@ void TcpTransport::start(ReceiveCallback onReceive) {
         // Notify session that connection died
         if (connection_closed_by_peer && closeCallback_) {
             logger.trace("Invoking close callback for fd " + std::to_string(fd));
-            closeCallback_();  
+            closeCallback_();
         }
     });
 }
@@ -82,11 +85,12 @@ void TcpTransport::send(const std::string& data) {
     if (!running.load()) {
         return;
     }
-    
+
     ssize_t sent = write(fd, data.data(), data.size());
     if (sent < 0) {
         auto& logger = Logger::instance();
-        logger.error("Write error on fd " + std::to_string(fd) + ": " + std::string(strerror(errno)));
+        logger.error("Write error on fd " + std::to_string(fd) + ": " +
+                     std::string(strerror(errno)));
         running = false;
     }
 }
@@ -96,7 +100,7 @@ void TcpTransport::send(const std::string& data) {
  */
 void TcpTransport::close() {
     // Required to be consistent with the similar check in start().
-    if (!running.exchange(false)) 
+    if (!running.exchange(false))
         return;
 
     auto& logger = Logger::instance();
