@@ -1,10 +1,7 @@
-"""
-Game Controller - coordinates Model (ClientContext + GameModel) and View (ConsoleView).
-Routes server messages and handles user actions.
-"""
+"""Game controller - handles user interaction and commands"""
 
+import json
 from pathlib import Path
-from typing import Optional
 from utils.logger import Logger
 from models.client_context import ClientContext, ClientState
 from models.game_model import GameModel
@@ -13,37 +10,42 @@ from views.console_view import ConsoleView
 
 class GameController:
     """
-    Controller layer - routes messages and coordinates Model/View.
-    
-    Responsibilities:
-    1. Route incoming server messages
-    2. Update Model (ClientContext state + GameModel data)
-    3. Update View (ConsoleView presentation)
-    4. Handle user commands
+    Game controller - handles user interaction.
     """
     
-    def __init__(self):
+    def __init__(self, session=None):
+        """
+        Initialize game controller.
+        
+        Args:
+            session: ClientSession instance for sending messages
+        """
+
         self._logger = Logger()
-        self.session = None  # Set by Client after creation
-        
-        # Model layer (separate state and data)
-        self.context = ClientContext()  # FSM state management
-        self.model = GameModel()        # Game data + transformations
-        
-        # View layer
-        self.view = ConsoleView()       # Presentation
+        self.session = session
+        self.context = ClientContext()  # gets the singleton instance
+        self.model = GameModel()        # gets the singleton instance
+        self.view = ConsoleView()
         
     def set_session(self, session):
         """Set session reference for sending messages"""
         self.session = session
     
-    def route_message(self, response: dict):
+    def route_message(self, message: dict):
         """
         Route incoming server response to appropriate handler.
         
         Args:
             response: JSON object from server
         """
+
+        try:            
+            response = json.loads(message)
+
+        except json.JSONDecodeError as e:
+            self._logger.error(f"Invalid JSON from server: {e}")
+            self._logger.debug(f"Raw data: {message}")
+
         msg_type = response.get("type", "unknown")
         
         self._logger.debug(f"Routing message type: {msg_type}")
@@ -66,6 +68,24 @@ class GameController:
             handler(response)
         else:
             self._logger.warning(f"Unknown message type: {msg_type}")
+    
+    def show_menu(self):
+        """Display state-aware menu"""
+        state = self.context.state
+        
+        # Build menu info from model/context
+        menu_info = {
+            "state_name": self.context.get_state_name(),
+            "player_color": self.context.player_color,
+            "session_id": self.context.session_id,
+            "current_turn": self.model.current_turn,
+            "white_joined": self.model.white_joined,
+            "black_joined": self.model.black_joined,
+            "move_count": self.model.move_count,
+        }
+        
+        # Display menu using view
+        self.view.display_menu(menu_info)
     
     def _handle_session_created(self, response: dict):
         """Handle session creation response"""
@@ -113,7 +133,7 @@ class GameController:
         
         # Refresh menu to show updated state
         print()  # Add newline
-        self._show_menu()
+        self.show_menu()
 
     def _handle_game_ready(self, response: dict):
         """Handle notification that both players are ready"""
@@ -133,7 +153,7 @@ class GameController:
         
         # Refresh menu 
         print() 
-        self._show_menu()
+        self.show_menu()
         print("Enter choice: ", end='', flush=True) 
         
     def _handle_game_started(self, response: dict):
@@ -149,7 +169,7 @@ class GameController:
         
         # Refresh menu 
         print() 
-        self._show_menu()
+        self.show_menu()
         print("Enter choice: ", end='', flush=True) 
         
     def _handle_move_result(self, response: dict):
@@ -269,7 +289,7 @@ class GameController:
         # Main game loop
         while True:
             # Show menu (view queries model/context)
-            self._show_menu()
+            self.show_menu()
             
             # Get user input
             choice = self.view.get_user_choice()
@@ -285,24 +305,6 @@ class GameController:
             
             # Small delay for response processing
             time.sleep(0.1)
-    
-    def _show_menu(self):
-        """Display state-aware menu"""
-        state = self.context.state
-        
-        # Build menu info from model/context
-        menu_info = {
-            "state_name": self.context.get_state_name(),
-            "player_color": self.context.player_color,
-            "session_id": self.context.session_id,
-            "current_turn": self.model.current_turn,
-            "white_joined": self.model.white_joined,
-            "black_joined": self.model.black_joined,
-            "move_count": self.model.move_count,
-        }
-        
-        # Display menu using view
-        self.view.display_menu(menu_info)
     
     def _handle_menu_choice(self, choice: str):
         """Handle user menu choice based on current state"""

@@ -10,6 +10,31 @@ GameContext::GameContext()
     logger.info("GameContext initialized");
 }
 
+json GameContext::resetGame(const std::string& player_id) {
+    auto& logger = Logger::instance();
+    logger.info("Game reset requested by player: " + player_id);
+
+    // Reset and go back to waiting
+    transitionTo(std::make_unique<WaitingForPlayersState>());
+
+    return json{{"type", "game_reset"}, {"status", "Waiting for new players"}};
+
+    // Build response for the player who ended
+    json end_response = {
+        {"type", "game_reset"},
+        {"status", getStatusMessage()},
+    };
+
+    // Broadcast game_started to ALL players
+    json game_end_broadcast = {{"type", "game_reset"},
+                               {"status", getStatusMessage()},
+                               {"white_player", getWhitePlayer()},
+                               {"black_player", getBlackPlayer()}};
+    broadcastToAll(game_end_broadcast, player_id);
+
+    return end_response;
+}
+
 void GameContext::transitionTo(std::unique_ptr<IGameState> new_state) {
     std::string old_state = current_state_->getStateName();
     current_state_ = std::move(new_state);

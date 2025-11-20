@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
+
 #include "GameContext.hpp"
 
 struct FileUploadState {
@@ -32,10 +33,6 @@ class GameController {
      * @return JSON response as string
      */
     std::string routeMessage(const std::string& content, const std::string& session_id);
-
-    std::optional<json> getAndClearPendingBroadcast() {
-        return game_context_->takePendingBroadcast();
-    }
 
    private:
     /**
@@ -69,12 +66,6 @@ class GameController {
      * @return JSON response
      */
     std::string handleEndGame(const std::string& session_id);
-
-    /**
-     * @brief Handle get_status command
-     * @return JSON response with game state
-     */
-    std::string handleGetStatus();
 
     /**
      * @brief Handle display_board command

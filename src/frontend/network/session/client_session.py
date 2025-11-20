@@ -60,57 +60,22 @@ class ClientSession:
             while "\n" in self._buffer:
                 # Extract one complete message
                 pos = self._buffer.index("\n")
-                message_str = self._buffer[:pos]
+                message = self._buffer[:pos]
                 self._buffer = self._buffer[pos + 1 :]
 
                 # Parse and handle this complete message
-                self._handle_message(message_str)
+                self._handle_message(message)
 
-    def _handle_message(self, json_str: str) -> None:
+    def _handle_message(self, reponse: str) -> None:
         """
-        Parse and handle a complete JSON message.
+        Parse and handle a complete application message.
 
-        @param json_str Complete JSON message string
+        @param json_str Complete message
         """
         if not self._active:
             return
-
-        try:
-            # Parse JSON response
-            response = json.loads(json_str.strip())
-            
-            # Route to appropriate handler (MVC pattern)
-            self.controller.route_message(response)
-
-        except json.JSONDecodeError as e:
-            self._logger.error(f"Invalid JSON from server: {e}")
-            self._logger.debug(f"Raw data: {json_str}")
-
-    # move to the MVC model or view 
-    def _display_strike(self, strike: dict) -> None:
-        """Format and display strike information"""
-        # Build human-readable message
-        msg = f"{strike['strike_number']}. {strike['color']} {strike['piece']}"
-
-        if strike.get("is_castling"):
-            msg += f" does a {strike['castling_type']} castling"
-            msg += f" from {strike['case_src']} to {strike['case_dest']}"
-        elif strike.get("is_capture"):
-            msg += f" on {strike['case_src']}"
-            msg += f" takes {strike['captured_color']} {strike['captured_piece']}"
-            msg += f" on {strike['case_dest']}"
-        else:
-            msg += f" moves from {strike['case_src']} to {strike['case_dest']}"
-
-        # Add check/checkmate suffix
-        if strike.get("is_checkmate"):
-            msg += ". Checkmate"
-        elif strike.get("is_check"):
-            msg += ". Check"
-        elif strike.get("is_stalemate"):
-            msg += ". Stalemate"
-
-        self._logger.info(msg)
+        
+        self.controller.route_message(reponse)
 
     # def send_message(self, message: Message) -> bool:
     def send(self, message: dict) -> bool:

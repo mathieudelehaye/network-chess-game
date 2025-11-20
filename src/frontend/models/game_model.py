@@ -18,6 +18,14 @@ class GameModel:
     State FSM is handled by ClientContext separately.
     NO parsing or validation - server does that.
     """
+
+    _instance = None
+
+    def __new__(cls):
+        """Ensure only one instance exists (Singleton)"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
     
     def __init__(self):
         # Game data (not state - that's in ClientContext)
@@ -59,13 +67,9 @@ class GameModel:
         self._current_turn = "white"  # White always starts
         self._move_count = 0
     
-    def update_turn(self):
+    def update_turn(self, value: Optional[str]):
         """Update turn after a move"""
-        if self._current_turn == "white":
-            self._current_turn = "black"
-        else:
-            self._current_turn = "white"
-        self._move_count += 1
+        self._move_count = int(value) if value else 0
     
     def reset(self):
         """Reset all game data"""

@@ -13,9 +13,19 @@ class ClientState(Enum):
 
 class ClientContext:
     """
-    Lightweight FSM for client state
-    Simpler than server - just tracks what UI should show
+    Client-side FSM state management (Singleton).
+    
+    Manages client state transitions and current state data.
+    Similar to Logger - ensures shared state across all controllers.
     """
+     
+    _instance = None
+
+    def __new__(cls):
+        """Ensure only one instance exists (Singleton)"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
     
     def __init__(self):
         self._state = ClientState.DISCONNECTED

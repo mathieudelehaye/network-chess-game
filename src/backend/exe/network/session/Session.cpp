@@ -2,18 +2,14 @@
 
 #include <iostream>
 #include <string>
+
 #include "GameController.hpp"
 #include "Logger.hpp"
 
-Session::Session(
-    std::unique_ptr<ITransport> transport, 
-    BroadcastCallback broadcast_fn,
-    std::shared_ptr<GameContext> game_context) : 
-    transport(std::move(transport)),
-    controller(std::make_unique<GameController>(game_context)),
-    broadcast_fn_(std::move(broadcast_fn)),
-    session_id_(generateSessionId()) {
-
+Session::Session(std::unique_ptr<ITransport> transport, std::shared_ptr<GameContext> game_context)
+    : transport(std::move(transport)),
+      controller(std::make_unique<GameController>(game_context)),
+      session_id_(generateSessionId()) {
     auto& logger = Logger::instance();
     logger.info("Session created: " + session_id_);
 }
@@ -26,10 +22,19 @@ Session::~Session() {
 }
 
 void Session::start() {
-    active = true;
-    transport->start([this](const std::string& payload) { onReceive(payload); });
+    if (active.exchange(true)) {
+        return;  // Already started
+    }
+
     auto& logger = Logger::instance();
     logger.info("Session started: " + session_id_);
+
+    // Send handshake as part of session initialisation
+    json handshake = {{"type", "session_created"}, {"session_id", session_id_}};
+    send(handshake.dump());
+
+    // Start receiving messages
+    transport->start([this](const std::string& payload) { onReceive(payload); });
 }
 
 void Session::onReceive(const std::string& raw) {
@@ -60,31 +65,7 @@ void Session::handleMessage(const std::string& message) {
 
     // Send response to requesting client
     send(response);
-    logger.debug("Sent response: " + response); 
-
-    // Check for broadcast message
-    auto broadcast = controller->getAndClearPendingBroadcast();
-    if (broadcast.has_value()) {
-        std::string broadcast_str = broadcast.value().dump();
-        std::string msg_type = broadcast.value().value("type", "");
-        
-        logger.debug("Preparing broadcast type: " + msg_type);
-        
-        // game_ready should go to ALL clients (including sender)
-        // player_joined should go to OTHER clients (excluding sender)
-        if (msg_type == "game_ready") {
-            // Broadcast to ALL including self
-            // We need to send to this session too!
-            send(broadcast_str);
-            // And broadcast to others
-            broadcast_fn_(session_id_, broadcast_str);
-        } else {
-            // Broadcast to others only
-            broadcast_fn_(session_id_, broadcast_str);
-        }
-        
-        logger.debug("Broadcast sent");   
-    }
+    logger.debug("Sent response: " + response);
 }
 
 void Session::send(const std::string& msg) const {

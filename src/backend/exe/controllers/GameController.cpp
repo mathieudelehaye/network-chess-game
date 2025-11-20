@@ -6,17 +6,15 @@
 
 using json = nlohmann::json;
 
-GameController::GameController(
-    std::shared_ptr<GameContext> context
-): game_context_(std::move(context)) {
+GameController::GameController(std::shared_ptr<GameContext> context)
+    : game_context_(std::move(context))  // each controller moves a copy of the same game context
+{
     auto& logger = Logger::instance();
     logger.debug("GameController initialised");
 }
 
-std::string GameController::routeMessage(
-    const std::string& content,
-    const std::string& session_id) {
-    
+std::string GameController::routeMessage(const std::string& content,
+                                         const std::string& session_id) {
     auto& logger = Logger::instance();
 
     // Parse application message (should be JSON)
@@ -42,8 +40,6 @@ std::string GameController::routeMessage(
                 return handleMakeMove(session_id, msg["from"], msg["to"]);
             } else if (command == "end_game") {
                 return handleEndGame(session_id);
-            } else if (command == "get_status") {
-                return handleGetStatus();
             } else if (command == "display_board") {
                 return handleDisplayBoard();
             }
@@ -112,16 +108,6 @@ std::string GameController::handleEndGame(const std::string& session_id) {
     logger.info("Session " + session_id + " ending game");
 
     json response = game_context_->handleEndRequest(session_id);
-    return response.dump();
-}
-
-std::string GameController::handleGetStatus() {
-    auto& logger = Logger::instance();
-    logger.debug("Getting game status");
-
-    json response;
-    response["type"] = "status";
-    response["message"] = game_context_->getStatusMessage();
     return response.dump();
 }
 

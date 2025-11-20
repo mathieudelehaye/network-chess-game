@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
 
@@ -16,6 +17,27 @@ class GameContext {
    public:
     GameContext();
     ~GameContext() = default;
+
+    using BroadcastCallback = std::function<void(const std::string& originating_session_id,
+                                                 const json& message, bool to_all)>;
+
+    void setBroadcastCallback(BroadcastCallback callback) {
+        broadcast_callback_ = std::move(callback);
+    }
+
+    void broadcastToAll(const std::string& session_id, const json& message) {
+        if (broadcast_callback_) {
+            broadcast_callback_(session_id, message, true);
+        }
+    }
+
+    void broadcastToOthers(const std::string& session_id, const json& message) {
+        if (broadcast_callback_) {
+            broadcast_callback_(session_id, message, false);
+        }
+    }
+
+    json resetGame(const std::string& player_id);
 
     // State transition (used by states to transition themselves)
     void transitionTo(std::unique_ptr<IGameState> state);
@@ -37,21 +59,6 @@ class GameContext {
     // Game access (public interface for states)
     ChessGame* getChessGame() { return chess_game_.get(); }
     const ChessGame* getChessGame() const { return chess_game_.get(); }
-    
-    // Broadcast management
-    void setPendingBroadcast(const json& msg) {
-        pending_broadcast_ = msg;
-    }
-
-    std::optional<json> takePendingBroadcast() {
-        auto msg = pending_broadcast_;
-        pending_broadcast_.reset();
-        return msg;
-    }
-
-    bool hasPendingBroadcast() const {
-        return pending_broadcast_.has_value();
-    }
 
     // Request handlers (delegate to current state)
     nlohmann::json handleJoinRequest(const std::string& player_id, const std::string& color);
@@ -66,5 +73,5 @@ class GameContext {
     std::unique_ptr<ChessGame> chess_game_;
     std::string white_player_id_;
     std::string black_player_id_;
-    std::optional<json> pending_broadcast_;
+    BroadcastCallback broadcast_callback_;
 };

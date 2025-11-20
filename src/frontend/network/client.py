@@ -49,7 +49,6 @@ class Client:
 
         self.controller = GameController()
 
-        # TODO: remove circular dependency, since session calls back controller (for received responses from server) and controller calls session (for sending messages to server).
         self.session = ClientSession(
             transport=transport,
             controller=self.controller
@@ -57,7 +56,7 @@ class Client:
 
         self.controller.set_session(self.session)
 
-        # Start session  to begin receive loop
+        # Start session to begin receive loop
         self.session.start()
         
         self._logger.info(f"Client started on {self.mode.value}")
@@ -111,7 +110,6 @@ class Client:
     def stop(self):
         """
         Stop client - close session and socket
-        Mirrors C++ Server::stop()
         """
         if self.session:
             self.session.close()
