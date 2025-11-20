@@ -1,6 +1,7 @@
 import socket
 from typing import Optional
 from controllers.game_controller import GameController
+from controllers.response_router import ResponseRouter
 from network.network_mode import NetworkMode
 from network.transport.transport_factory import TransportFactory
 from network.session.client_session import ClientSession
@@ -48,10 +49,11 @@ class Client:
         transport = TransportFactory.create(fd, self.mode)
 
         self.controller = GameController()
+        self.router = ResponseRouter(self.controller)
 
         self.session = ClientSession(
             transport=transport,
-            controller=self.controller
+            router=self.router
         )
 
         self.controller.set_session(self.session)

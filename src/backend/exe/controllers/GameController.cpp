@@ -13,8 +13,10 @@ GameController::GameController(std::shared_ptr<GameContext> context)
     logger.debug("GameController initialised");
 }
 
-std::string GameController::routeMessage(const std::string& content,
-                                         const std::string& session_id) {
+std::string GameController::routeMessage(
+    const std::string& content,
+    const std::string& session_id) {
+
     auto& logger = Logger::instance();
 
     // Parse application message (should be JSON)
@@ -74,6 +76,39 @@ std::string GameController::routeMessage(const std::string& content,
         error["type"] = "error";
         error["error"] = "Internal server error";
         return error.dump();
+    }
+}
+
+void GameController::routeDisconnect(const std::string& session_id) {
+    // Detect if one of the players disconnected and if so reset the game
+
+    auto& logger = Logger::instance();
+    logger.debug("Handling disconnect for session: " + session_id);
+    
+    // Check if this session was a player
+    std::string disconnected_color;
+    
+    if (game_context_->getWhitePlayer() == session_id) {
+        disconnected_color = "white";
+        game_context_->setWhitePlayer("");  // Clear white player
+    } else if (game_context_->getBlackPlayer() == session_id) {
+        disconnected_color = "black";
+        game_context_->setBlackPlayer("");  // Clear black player
+    }
+    
+    logger.info(disconnected_color + " player disconnected. Resetting game");
+    game_context_->resetGame("");
+    
+    if (!disconnected_color.empty()) {
+        logger.debug("Notifying other players that game reset");
+                
+        // Broadcast reset to other players
+        json reset_broadcast = {
+            {"type", "game_reset"},
+            {"reason", "all_players_disconnected"},
+            {"status", "Waiting for players..."}
+        };
+        game_context_->broadcastToOthers(session_id, reset_broadcast);
     }
 }
 

@@ -4,7 +4,6 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
-
 #include "GameContext.hpp"
 
 struct FileUploadState {
@@ -33,6 +32,9 @@ class GameController {
      * @return JSON response as string
      */
     std::string routeMessage(const std::string& content, const std::string& session_id);
+
+    // Could be an internal message, but it seems more straighforward that way.
+    void routeDisconnect(const std::string& session_id);
 
    private:
     /**

@@ -2,7 +2,6 @@
 
 #include <nlohmann/json.hpp>
 #include <string>
-
 #include "Logger.hpp"
 
 using json = nlohmann::json;

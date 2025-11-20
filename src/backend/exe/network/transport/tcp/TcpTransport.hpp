@@ -15,7 +15,7 @@
  * remote clients (console frontend, GUI, etc.).
  */
 class TcpTransport : public ITransport {
-   public:
+public:
     /**
      * @brief Construct a transport from an already-accepted socket descriptor.
      *
@@ -60,8 +60,11 @@ class TcpTransport : public ITransport {
      */
     void close() override;
 
-   private:
+    void setCloseCallback(CloseCallback onClose) override;
+
+private:
     int fd;                            ///< Underlying POSIX socket descriptor.
     std::jthread readerThread;         ///< Background thread reading the socket.
     std::atomic<bool> running{false};  ///< Indicates whether the read loop is active.
+    CloseCallback closeCallback_;
 };

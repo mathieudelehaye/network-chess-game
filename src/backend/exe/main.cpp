@@ -28,7 +28,7 @@ int main() {
         logger.info("Stopping server...");
         server.stop();
     } catch (const std::runtime_error& e) {
-        logger.critical("Server initialization failed: " + std::string(e.what()));
+        logger.critical("Server initialisation failed: " + std::string(e.what()));
         return 1;
     } catch (const std::exception& e) {
         logger.critical("Unexpected error: " + std::string(e.what()));

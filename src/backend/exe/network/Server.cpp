@@ -31,7 +31,7 @@ Server::Server(NetworkMode mode, const std::string& ip, int port)
 void Server::setupGameContextBroadcast() {
     shared_game_context_->setBroadcastCallback(
         [this](const std::string& originating_session_id, const json& msg, bool to_all) {
-            std::string message = msg.dump() + "\n";
+            std::string message = msg.dump();
 
             if (to_all) {
                 this->broadcastToAll(message);
@@ -95,8 +95,11 @@ void Server::acceptLoop(std::stop_token st) {
     while (!st.stop_requested() && running.load()) {
         int client_fd = accept(server_fd, nullptr, nullptr);
 
-        if (client_fd < 0)
-            continue;  // temporary error, try again
+        // If no connection request, we use that time to clean up sessions
+        if (client_fd < 0) {
+            cleanupDeadSessions();
+            continue;  
+        }
 
         logger.debug("Client connected");
 
@@ -123,6 +126,12 @@ void Server::connectTCP(const std::string& ip, int port) {
     if (server_fd < 0)
         throw std::runtime_error("Cannot create TCP socket");
 
+    // Enable SO_REUSEADDR to allow immediate reuse of the port
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        throw std::runtime_error("Failed to set SO_REUSEADDR: " + std::string(strerror(errno)));
+    }
+
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -139,4 +148,21 @@ void Server::connectTCP(const std::string& ip, int port) {
 
 void Server::connectIPC() {
     // TODO: implement
+}
+
+void Server::cleanupDeadSessions() {
+    std::lock_guard<std::mutex> lock(sessions_mutex_);
+    
+    auto& logger = Logger::instance();
+    
+    // Remove sessions that are no longer active
+    auto it = sessions.begin();
+    while (it != sessions.end()) {
+        if (!(*it)->isActive()) {
+            logger.debug("Removing dead session: " + (*it)->getSessionId());
+            it = sessions.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }

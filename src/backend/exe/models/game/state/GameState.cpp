@@ -67,7 +67,7 @@ json ReadyToStartState::handleStartRequest(GameContext* context, const std::stri
     // Transition to InProgressState
     context->transitionTo(std::make_unique<InProgressState>());
 
-    // Initialize chess game
+    // Initialise chess game
     context->getChessGame()->reset();
     logger.info("Game started");
 
@@ -92,7 +92,7 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
                                         const std::string& from, const std::string& to) {
     auto* game = context->getChessGame();
     if (!game) {
-        return buildError("Game not initialized");
+        return buildError("Game not initialised");
     }
 
     // Apply move to model
@@ -141,7 +141,7 @@ json InProgressState::handleEndRequest(GameContext* context, const std::string& 
 json InProgressState::handleDisplayBoard(GameContext* context) {
     auto* game = context->getChessGame();
     if (!game) {
-        return buildError("Game not initialized");
+        return buildError("Game not initialised");
     }
 
     try {

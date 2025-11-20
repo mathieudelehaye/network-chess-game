@@ -18,8 +18,11 @@ class GameContext {
     GameContext();
     ~GameContext() = default;
 
-    using BroadcastCallback = std::function<void(const std::string& originating_session_id,
-                                                 const json& message, bool to_all)>;
+    using BroadcastCallback = std::function<void(
+        const std::string& originating_session_id,
+        const json& message, 
+        bool to_all
+    )>;
 
     void setBroadcastCallback(BroadcastCallback callback) {
         broadcast_callback_ = std::move(callback);

@@ -4,17 +4,18 @@ from models.client_context import ClientContext
 from models.game_model import GameModel
 from views.console_view import ConsoleView
 
+
 class ResponseRouter:
     """
     Routes incoming server messages to appropriate handlers.
-    
-    NOT a singleton - can be instantiated multiple times if needed.
-    Uses singleton data models (ClientContext, GameModel) for shared state.
     """
     
-    def __init__(self, game_controller=None):
+    def __init__(
+        self, 
+        game_controller
+    ):
         """
-        Initialize message router.
+        Initialise message router.
         
         Args:
             game_controller: Optional reference to GameController for menu refresh
@@ -28,6 +29,7 @@ class ResponseRouter:
     
     def route(self, message: str):
         """Route incoming server message to appropriate handler"""
+        
         try:            
             response = json.loads(message)
         except json.JSONDecodeError as e:
@@ -92,9 +94,7 @@ class ResponseRouter:
             self.context.on_joined()
             self.view.display_info(">>> Both players ready! Press Enter to refresh <<<")
         
-        if self.game_controller:
-            print()
-            self.game_controller.show_menu()
+        self._refresh_menu()
 
     def _handle_game_ready(self, response: dict):
         """Handle game ready notification"""
@@ -110,20 +110,16 @@ class ResponseRouter:
         self.view.display_info(f"\n>>> {status} <<<")
         self.view.display_info(">>> Press Enter to refresh menu <<<")
         
-        if self.game_controller:
-            print()
-            self.game_controller.show_menu()
+        self._refresh_menu()
         
-    def _handle_game_started(self, response: dict):
+    def _handle_game_started(self, _):
         """Handle game started"""
         self.context.on_game_started()
         self.model.start_game()
         
         self.view.display_success("Game started!")
         
-        if self.game_controller:
-            print()
-            self.game_controller.show_menu()
+        self._refresh_menu()
         
     def _handle_move_result(self, response: dict):
         """Handle move result"""
@@ -159,11 +155,13 @@ class ResponseRouter:
         self.model.reset()
         self.view.display_info("Game has been reset")
         
-        if self.game_controller:
-            print()
-            self.game_controller.show_menu()
+        self._refresh_menu()
         
     def _handle_error(self, response: dict):
         """Handle error"""
         error = response.get('error', 'Unknown error')
         self.view.display_error(error)
+
+    def _refresh_menu(self):
+        print()
+        self.game_controller.show_menu()

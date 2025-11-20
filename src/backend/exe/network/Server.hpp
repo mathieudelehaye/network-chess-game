@@ -13,7 +13,7 @@
 #include "TransportFactory.hpp"
 
 class Server {
-   public:
+public:
     Server(NetworkMode mode, const std::string& ip, int port);
 
     void start();
@@ -22,11 +22,12 @@ class Server {
     void broadcastToAll(const std::string& message);
     void broadcastToOthers(const std::string& exclude_session_id, const std::string& message);
 
-   private:
+private:
     void acceptLoop(std::stop_token st);
     void connectTCP(const std::string& ip, int port);
     void connectIPC();
     void setupGameContextBroadcast();
+    void cleanupDeadSessions();
 
     NetworkMode network;
     std::jthread acceptThread;

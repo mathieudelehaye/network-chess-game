@@ -2,7 +2,7 @@ import json
 import threading
 from network.transport.transport_interface import ITransport
 from utils.logger import Logger
-from controllers.game_controller import GameController
+from controllers.response_router import ResponseRouter
 
 class ClientSession:
     """
@@ -13,14 +13,14 @@ class ClientSession:
     def __init__(
         self, 
         transport: ITransport, 
-        controller: GameController):
+        router: ResponseRouter):
         """
         Construct a client session.
 
         @param transport The transport layer to use (ownership transferred)
         """
         self.transport = transport
-        self.controller = controller
+        self.router = router
         self._logger = Logger()
         self._active = False
 
@@ -75,9 +75,8 @@ class ClientSession:
         if not self._active:
             return
         
-        self.controller.route_message(reponse)
+        self.router.route(reponse)
 
-    # def send_message(self, message: Message) -> bool:
     def send(self, message: dict) -> bool:
         """
         Send a JSON message.
@@ -90,7 +89,7 @@ class ClientSession:
             return False
 
         try:
-            # Convert dict to JSON string (fixed: was message.to_json())
+            # import pdb; pdb.set_trace()
             json_str = json.dumps(message) + "\n"
             self.transport.send(json_str)
             self._logger.debug(f"Sent: {json_str.strip()}")

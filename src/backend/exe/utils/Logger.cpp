@@ -4,8 +4,8 @@
 #include <vector>
 
 Logger::Logger() {
-    // change this with one of the values: `info`, `debug`, `warn`, `err`
-    const auto debug_level = spdlog::level::debug;
+    // change this with one of the values: `info`, `debug`, `warn`, `err`, `trace`, `critical`
+    const auto debug_level = spdlog::level::trace;
 
     // Get executable path
     std::filesystem::path exe_path = std::filesystem::canonical("/proc/self/exe");

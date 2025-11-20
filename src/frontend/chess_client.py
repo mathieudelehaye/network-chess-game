@@ -72,15 +72,22 @@ def main():
         
         client.start()
         
-        print("Press Enter to disconnect...")
-        
+        print("Press Enter to exit...")
         input()  # Wait for user to press any key
         
         logger.info("Stopping client...")
         client.stop()
+    
+    except KeyboardInterrupt:
+        logger.info("\nReceived interrupt signal - shutting down...")
+        # Gracefully close
+        if 'client' in locals():
+            client.stop()
+        logger.info("Client shut down gracefully")
+        return 0
         
     except RuntimeError as e:
-        logger.critical(f"Client initialization failed: {e}")
+        logger.critical(f"Client initialisation failed: {e}")
         return 1
     except Exception as e:
         logger.critical(f"Unexpected error: {e}")

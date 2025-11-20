@@ -63,7 +63,7 @@ class GameModel:
             self._black_joined = True
     
     def start_game(self):
-        """Initialize game data when game starts"""
+        """Initialise game data when game starts"""
         self._current_turn = "white"  # White always starts
         self._move_count = 0
     

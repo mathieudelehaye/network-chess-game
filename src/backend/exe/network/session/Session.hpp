@@ -15,8 +15,8 @@
  * The Session owns an ITransport (Strategy), parses JSON, and routes commands
  * using GameController.
  */
-class Session {
-   public:
+class Session : public std::enable_shared_from_this<Session> {
+public:
     explicit Session(std::unique_ptr<ITransport> transport,
                      std::shared_ptr<GameContext> game_context);
     ~Session();
@@ -25,15 +25,16 @@ class Session {
     void send(const std::string& msg) const;                  ///< Send message over transport
     void close();                                             ///< Shutdown session
     std::string getSessionId() const { return session_id_; }  ///< Getter for the session id
+    bool isActive() const { return active.load(); }
 
-   private:
+private:
     void onReceive(
         const std::string& raw);  ///< Accumulate payloads until having received a complete message
     void handleMessage(const std::string& message);  ///< Route complete message
     static std::string generateSessionId();          ///< Generate unique session ID
 
-    std::unique_ptr<GameController> controller;
     std::unique_ptr<ITransport> transport;
+    std::unique_ptr<GameController> controller;
     std::atomic<bool> active{
         false};          /// Useful to avoid passing messages in callback functions during shutdown.
     std::string buffer;  /// Buffer to accumulate message fragments

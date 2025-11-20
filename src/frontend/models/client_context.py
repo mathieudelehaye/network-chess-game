@@ -66,6 +66,15 @@ class ClientContext:
         """Transition: PLAYING → GAME_OVER"""
         if self._state == ClientState.PLAYING:
             self._state = ClientState.GAME_OVER
+
+    def on_reset(self):
+        """Transition: PLAYING → GAME_OVER"""
+        if (
+            self._state == ClientState.JOINED or
+            self._state == ClientState.PLAYING or
+            self._state == ClientState.GAME_OVER
+        ):
+            self._state = ClientState.CONNECTED
             
     def on_disconnected(self):
         """Transition: ANY → DISCONNECTED"""

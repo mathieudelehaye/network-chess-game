@@ -12,18 +12,18 @@ class Logger:
         """Ensure only one instance exists (Singleton)"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            cls._instance._initialised = False
         return cls._instance
 
     def __init__(self):
-        """Initialize logger object"""
+        """Initialise logger object"""
 
         # Constructor seems to be callable more than once, even for a Singleton class object.
         # pylint: disable=access-member-before-definition
-        if hasattr(self, "_initialized") and self._initialized:
+        if hasattr(self, "_initialised") and self._initialised:
             return
 
-        self._initialized = True
+        self._initialised = True
 
         # change this with one of the values: INFO, DEBUG, WARNING, ERROR
         logging_level = logging.DEBUG

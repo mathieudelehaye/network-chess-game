@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <functional>
 #include <string>
 
@@ -25,6 +24,8 @@ class ITransport {
      * mechanism.
      */
     using ReceiveCallback = std::function<void(const std::string&)>;
+    
+    using CloseCallback = std::function<void()>;
 
     /// Virtual destructor
     virtual ~ITransport() = default;
@@ -53,4 +54,10 @@ class ITransport {
      * resources.
      */
     virtual void close() = 0;
+
+    /**
+     * @brief Sets a callback to be invoked when the transport closes unexpectedly.
+     * @param onClose Callback to handle connection closure.
+     */
+    virtual void setCloseCallback(CloseCallback onClose) = 0;
 };

@@ -1,6 +1,5 @@
 """Game controller - handles user interaction and commands"""
 
-import json
 from pathlib import Path
 from utils.logger import Logger
 from models.client_context import ClientContext, ClientState
@@ -15,7 +14,7 @@ class GameController:
     
     def __init__(self, session=None):
         """
-        Initialize game controller.
+        Initialise game controller.
         
         Args:
             session: ClientSession instance for sending messages
@@ -30,44 +29,6 @@ class GameController:
     def set_session(self, session):
         """Set session reference for sending messages"""
         self.session = session
-    
-    def route_message(self, message: dict):
-        """
-        Route incoming server response to appropriate handler.
-        
-        Args:
-            response: JSON object from server
-        """
-
-        try:            
-            response = json.loads(message)
-
-        except json.JSONDecodeError as e:
-            self._logger.error(f"Invalid JSON from server: {e}")
-            self._logger.debug(f"Raw data: {message}")
-
-        msg_type = response.get("type", "unknown")
-        
-        self._logger.debug(f"Routing message type: {msg_type}")
-        
-        # Route to handler based on type
-        handlers = {
-            "session_created": self._handle_session_created,
-            "join_success": self._handle_join_success,
-            "player_joined": self._handle_player_joined, 
-            "game_ready": self._handle_game_ready,
-            "game_started": self._handle_game_started,
-            "move_result": self._handle_move_result,
-            "board_display": self._handle_board_display,
-            "game_over": self._handle_game_over,
-            "error": self._handle_error,
-        }
-        
-        handler = handlers.get(msg_type)
-        if handler:
-            handler(response)
-        else:
-            self._logger.warning(f"Unknown message type: {msg_type}")
     
     def show_menu(self):
         """Display state-aware menu"""
@@ -86,135 +47,7 @@ class GameController:
         
         # Display menu using view
         self.view.display_menu(menu_info)
-    
-    def _handle_session_created(self, response: dict):
-        """Handle session creation response"""
-        session_id = response.get("session_id")
         
-        # Update state
-        self.context.on_connected(session_id)
-        
-        # Update view
-        self.view.display_connected(session_id)
-        
-    def _handle_join_success(self, response: dict):
-        """Handle successful join response"""
-        color = response.get("color")
-        status = response.get("status", "")
-        
-        # Update state
-        self.context.on_joined(color)
-        
-        # Update game data
-        self.model.set_player_joined(color)
-        
-        # Update view
-        self.view.display_success(f"Joined as {color}")
-        if status:
-            self.view.display_info(status)
-        
-    def _handle_player_joined(self, response: dict):
-        """Handle notification that another player joined"""
-        color = response.get("color")
-        status = response.get("status", "")
-        
-        # Update game data
-        self.model.set_player_joined(color)
-        
-        # Display notification
-        self.view.display_info(f"\n>>> Player joined as {color} <<<")
-        if status:
-            self.view.display_info(f">>> {status} <<<")
-        
-        if self.model.both_players_joined:
-            # Transition to JOINED state
-            self.context.on_joined()
-            self.view.display_info(">>> Both players ready! You can now start the game. <<<")
-        
-        # Refresh menu to show updated state
-        print()  # Add newline
-        self.show_menu()
-
-    def _handle_game_ready(self, response: dict):
-        """Handle notification that both players are ready"""
-        status = response.get("status", "Both players joined!")
-        white_player = response.get("white_player")
-        black_player = response.get("black_player")
-        
-        # Update model with both players
-        if white_player:
-            self.model.set_player_joined("white")
-        if black_player:
-            self.model.set_player_joined("black")
-        
-        # Display notification
-        self.view.display_info(f"\n>>> {status} <<<")
-        self.view.display_info(">>> Press Enter to refresh menu <<<")
-        
-        # Refresh menu 
-        print() 
-        self.show_menu()
-        print("Enter choice: ", end='', flush=True) 
-        
-    def _handle_game_started(self, response: dict):
-        """Handle game started response"""
-        # Update state
-        self.context.on_game_started()
-        
-        # Initialize game data
-        self.model.start_game()
-        
-        # Update view
-        self.view.display_success("Game started!")
-        
-        # Refresh menu 
-        print() 
-        self.show_menu()
-        print("Enter choice: ", end='', flush=True) 
-        
-    def _handle_move_result(self, response: dict):
-        """Handle move result response"""
-        strike = response.get("strike", {})
-        
-        # Transform data using model
-        description = self.model.build_move_description(strike)
-        suffix = self.model.build_strike_suffix(strike)
-        full_description = description + suffix
-        
-        # Display using view
-        self.view.display_info(full_description)
-        
-        # Update game data
-        self.model.update_turn()
-        
-        # Check for game end
-        if strike.get('is_checkmate'):
-            self.context.on_game_over()
-            self.view.display_game_over("Checkmate")
-        elif strike.get('is_stalemate'):
-            self.context.on_game_over()
-            self.view.display_game_over("Stalemate")
-            
-    def _handle_board_display(self, response: dict):
-        """Handle board display response"""
-        board = response.get('data', {}).get('board', '')
-        self.view.display_board(board)
-        
-    def _handle_game_over(self, response: dict):
-        """Handle game over response"""
-        result = response.get('result', 'Unknown')
-        
-        # Update state
-        self.context.on_game_over()
-        
-        # Display result
-        self.view.display_game_over(result)
-        
-    def _handle_error(self, response: dict):
-        """Handle error response"""
-        error = response.get('error', 'Unknown error')
-        self.view.display_error(error)
-    
     def send_join(self, color: str):
         """Send join game command"""
         if not self.context.can_join():
