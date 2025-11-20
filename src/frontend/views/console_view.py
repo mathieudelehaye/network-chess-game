@@ -161,22 +161,18 @@ class ConsoleView:
     
     def display_success(self, message: str) -> None:
         """Display success message"""
-        print(f"Success: {message}")
         self._logger.info(message)
     
     def display_error(self, error: str) -> None:
         """Display error message"""
-        print(f"Error: {error}")
         self._logger.error(error)
     
     def display_info(self, message: str) -> None:
         """Display informational message"""
-        print(f"Info: {message}")
         self._logger.info(message)
     
     def display_warning(self, message: str) -> None:
         """Display warning message"""
-        print(f"Warning: {message}")
         self._logger.warning(message)
     
     def display_connecting(self, host: str, port: int) -> None:

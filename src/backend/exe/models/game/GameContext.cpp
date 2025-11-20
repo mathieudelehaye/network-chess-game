@@ -53,7 +53,7 @@ json GameContext::resetGame(const std::string& player_id) {
                                {"status", getStatusMessage()},
                                {"white_player", getWhitePlayer()},
                                {"black_player", getBlackPlayer()}};
-    broadcastToOthers(game_end_broadcast, player_id);
+    broadcastToOthers(player_id, game_end_broadcast);
 
     return end_response;
 }

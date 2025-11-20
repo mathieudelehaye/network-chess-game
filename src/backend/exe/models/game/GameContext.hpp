@@ -14,8 +14,10 @@
  * Owns the ChessGame instance and coordinates state transitions
  */
 
-using BroadcastCallback = std::function<void(const std::string& originating_session_id,
-                                             const json& message, bool to_all)>;
+using BroadcastCallback = std::function<void(
+    const std::string& originating_session_id,
+    const json& message, 
+    bool to_all)>;
 
 class GameContext {
    public:

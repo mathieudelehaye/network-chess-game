@@ -32,7 +32,11 @@ Server::Server(NetworkMode mode, const std::string& ip, int port)
 void Server::setupBroadcastCallback() {
     shared_controller_->setBroadcastCallback(
         [this](const std::string& originating_session_id, const json& msg, bool to_all) {
+            auto& logger = Logger::instance();
+            logger.debug("Server::setupBroadcastCallback");
+            
             std::string message = msg.dump();
+            logger.debug("Server::setupBroadcastCallback: message = " + message);
 
             if (to_all) {
                 this->broadcastToAll(message);

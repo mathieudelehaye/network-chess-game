@@ -56,6 +56,9 @@ void GameController::routeDisconnect(const std::string& session_id) {
 
     std::string disconnected_color;
 
+    // Only reset the game if disconnected player had joined it.
+    bool hadPlayerJoined = false;
+
     // Thread-safe instruction block
     {
         // Lock the game context
@@ -65,23 +68,31 @@ void GameController::routeDisconnect(const std::string& session_id) {
         if (game_context_->getWhitePlayer() == session_id) {
             disconnected_color = "white";
             game_context_->setWhitePlayer("");  // Clear white player
+            hadPlayerJoined = true;
         } else if (game_context_->getBlackPlayer() == session_id) {
             disconnected_color = "black";
             game_context_->setBlackPlayer("");  // Clear black player
+            hadPlayerJoined = true;
         }
 
-        logger.info(disconnected_color + " player disconnected. Resetting game");
-        game_context_->resetGame("");
+        logger.info(disconnected_color + " player disconnected");
+
+        if (hadPlayerJoined) {
+            logger.info("Resetting game");
+            game_context_->resetGame("");
+        }
     }
 
-    if (!disconnected_color.empty()) {
-        logger.debug("Notifying other players that game reset");
-
-        // Broadcast reset to other players
-        json reset_broadcast = {{"type", "game_reset"},
-                                {"reason", "all_players_disconnected"},
-                                {"status", "Waiting for players..."}};
-        game_context_->broadcastToOthers(session_id, reset_broadcast);
+    if (hadPlayerJoined) {
+        if (!disconnected_color.empty()) {
+            logger.debug("Notifying other players that game reset");
+    
+            // Broadcast reset to other players
+            json reset_broadcast = {{"type", "game_reset"},
+                                    {"reason", "all_players_disconnected"},
+                                    {"status", "Waiting for players..."}};
+            game_context_->broadcastToOthers(session_id, reset_broadcast);
+        }
     }
 }
 

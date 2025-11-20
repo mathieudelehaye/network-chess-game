@@ -76,10 +76,10 @@ json ReadyToStartState::handleStartRequest(GameContext* context, const std::stri
 
     // Broadcast game_started to ALL players
     json game_started_broadcast = {{"type", "game_started"},
-                                   {"status", context->getStatusMessage()},
-                                   {"white_player", context->getWhitePlayer()},
-                                   {"black_player", context->getBlackPlayer()}};
-    context->broadcastToAll(game_started_broadcast, player_id);
+                                    {"status", context->getStatusMessage()},
+                                    {"white_player", context->getWhitePlayer()},
+                                    {"black_player", context->getBlackPlayer()}};
+    context->broadcastToOthers(player_id, game_started_broadcast);
 
     return start_response;
 }
