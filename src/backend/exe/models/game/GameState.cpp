@@ -95,16 +95,6 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
         return buildError("Game not initialised");
     }
 
-    // Determine which color is making the move
-    std::string player_color;
-    if (player_id == context->getWhitePlayer()) {
-        player_color = "white";
-    } else if (player_id == context->getBlackPlayer()) {
-        player_color = "black";
-    } else {
-        return buildError("Invalid player");
-    }
-
     // Apply move to model
     auto strike_data = game->applyMove(from, to);
     if (!strike_data) {
@@ -118,7 +108,7 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
     response["strike"] = {{"case_src", strike_data->case_src},
                           {"case_dest", strike_data->case_dest},
                           {"piece", strike_data->piece},
-                          {"color", player_color},
+                          {"color", strike_data->color},
                           {"strike_number",strike_data->strike_number},
                           {"is_capture", strike_data->is_capture},
                           {"captured_piece", strike_data->captured_piece},
@@ -144,7 +134,7 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
     // Broadcast move to ALL players
     json game_end_broadcast = {
         {"type", "move_result"}, {"success", true}, {"strike", response["strike"]}};
-    context->broadcastToAll(player_id, game_end_broadcast);
+    context->broadcastToOthers(player_id, game_end_broadcast);
 
     return response;
 }

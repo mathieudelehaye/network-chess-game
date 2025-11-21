@@ -34,8 +34,10 @@ json GameContext::resetGame(const std::string& player_id) {
     setWhitePlayer("");
     setBlackPlayer("");
 
-    // Reset chess game
-    chess_game_.reset();
+    // Reset chess game state
+    if (chess_game_) {
+        chess_game_->reset();
+    }
 
     // Reset and go back to waiting
     transitionTo(std::make_unique<WaitingForPlayersState>());

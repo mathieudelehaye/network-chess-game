@@ -107,43 +107,6 @@ class ConsoleView:
                 return parts[0].strip(), parts[1].strip()
         return None, None
     
-    def get_color_choice(self) -> str:
-        """Get color choice from user"""
-        while True:
-            color = input("Choose color (white/black): ").strip().lower()
-            if color in ["white", "black"]:
-                return color
-            print("Invalid choice. Please enter 'white' or 'black'")
-    
-    def get_file_path(self) -> str:
-        """Get file path from user"""
-        return input("Enter game file path: ").strip()
-
-    def display_strike(self, strike: dict) -> None:
-        """Format and display strike information"""
-        msg = f"{strike['strike_number']}. {strike['color']} {strike['piece']}"
-
-        if strike.get("is_castling"):
-            msg += f" does a {strike['castling_type']} castling"
-            msg += f" from {strike['case_src']} to {strike['case_dest']}"
-        elif strike.get("is_capture"):
-            msg += f" on {strike['case_src']}"
-            msg += f" takes {strike['captured_color']} {strike['captured_piece']}"
-            msg += f" on {strike['case_dest']}"
-        else:
-            msg += f" moves from {strike['case_src']} to {strike['case_dest']}"
-
-        # Add check/checkmate suffix
-        if strike.get("is_checkmate"):
-            msg += ". Checkmate"
-        elif strike.get("is_check"):
-            msg += ". Check"
-        elif strike.get("is_stalemate"):
-            msg += ". Stalemate"
-
-        print(msg)
-        self._logger.info(msg)
-    
     def display_board(self, board: str) -> None:
         """Display chess board"""
         print("\n" + "="*50)
@@ -175,31 +138,9 @@ class ConsoleView:
         """Display warning message"""
         self._logger.warning(message)
     
-    def display_connecting(self, host: str, port: int) -> None:
-        """Display connecting message"""
-        self._logger.info(f"Connecting to {host}:{port}")
-    
     def display_connected(self, session_id: str) -> None:
         """Display connection success"""
         self._logger.info(f"Connected with session: {session_id}")
-    
-    def display_disconnected(self) -> None:
-        """Display disconnection message"""
-        print("\nDisconnected from server")
-        self._logger.info("Disconnected")
-    
-    def display_waiting(self, message: str) -> None:
-        """Display waiting message"""
-        print(f"Waiting: {message}...")
-    
-    def clear_screen(self) -> None:
-        """Clear console screen (optional)"""
-        import os
-        os.system('clear' if os.name != 'nt' else 'cls')
-    
-    def prompt_continue(self, message: str = "Press Enter to continue") -> None:
-        """Prompt user to continue"""
-        input(f"\n{message}...")
     
     def confirm_action(self, message: str) -> bool:
         """Ask user to confirm an action"""

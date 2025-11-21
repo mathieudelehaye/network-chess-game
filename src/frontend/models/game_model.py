@@ -94,7 +94,7 @@ class GameModel:
         if strike.get("is_castling"):
             msg += f" does a {strike['castling_type']} castling"
             msg += f" from {strike['case_src']} to {strike['case_dest']}"
-        elif strike.get("is_capture"):
+        elif strike.get("is_capture", False):
             msg += f" on {strike['case_src']}"
             msg += f" takes {strike['captured_color']} {strike['captured_piece']}"
             msg += f" on {strike['case_dest']}"

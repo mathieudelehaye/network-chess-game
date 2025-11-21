@@ -1,6 +1,7 @@
 #include "ChessGame.hpp"
 
 #include <sstream>
+#include "Logger.hpp"
 
 ChessGame::ChessGame() : moveNumber_(1) {
     board_.setFen(chess::constants::STARTPOS);
@@ -12,10 +13,14 @@ std::optional<StrikeData> ChessGame::applyMove(const std::string& from, const st
         return std::nullopt;
     }
 
+    // Before applying the move, check what's on the destination square
+    auto destination = chess::Square(to);
+    auto captured = board_.at(destination);
+
     board_.makeMove(*move);
     moveNumber_++;
 
-    return buildStrikeData(*move);
+    return buildStrikeData(*move, captured);
 }
 
 chess::Color ChessGame::getCurrentPlayer() const {
@@ -77,16 +82,36 @@ std::optional<chess::Move> ChessGame::findMove(const std::string& from,
     return std::nullopt;
 }
 
-StrikeData ChessGame::buildStrikeData(const chess::Move& move) const {
+StrikeData ChessGame::buildStrikeData(
+    const chess::Move& move,
+    const chess::Piece& captured
+) const {
     StrikeData data;
     data.case_src = std::string(move.from());
     data.case_dest = std::string(move.to());
     data.piece = getPieceName(board_.at(move.to()).type());
-    data.is_capture = board_.isCapture(move);
+    
+    data.is_capture = (captured != chess::Piece::NONE);
+
     data.is_check = inCheck();
     data.is_checkmate = isCheckmate();
     data.is_stalemate = isStalemate();
     data.strike_number = moveNumber_;
+    data.color = (moveNumber_ % 2 == 1) ? "white" : "black";
+
+    if (data.is_capture) {
+        data.captured_color = (moveNumber_ % 2 == 1) ? "black" : "white";
+        data.captured_piece = getPieceName(captured.type());
+    }
+
+    if (move.typeOf() == chess::Move::CASTLING) {
+        data.is_castling = true;
+        
+        // Determine castling type based on the destination square
+        // King-side castling: king moves to g-file
+        // Queen-side castling: king moves to c-file
+        data.castling_type = (move.to().file() == chess::File::FILE_G) ? "little" : "big";
+    }
 
     return data;
 }

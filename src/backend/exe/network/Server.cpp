@@ -52,11 +52,18 @@ void Server::broadcastToAll(const std::string& message) {
     auto& logger = Logger::instance();
     logger.debug("Broadcasting to all sessions: " + message);
 
+    int count = 0;
     for (const auto& session : sessions) {
+        // Skip if session is null or closed
+        if (!session || !session->isActive()) {
+            logger.trace("Skipping inactive session");
+            continue;
+        }
         session->send(message);
+        count++;
     }
 
-    logger.debug("Broadcast sent to " + std::to_string(sessions.size()) + " sessions");
+    logger.debug("Broadcast sent to " + std::to_string(count) + " sessions");
 }
 
 void Server::broadcastToOthers(const std::string& exclude_session_id, const std::string& message) {
@@ -68,6 +75,11 @@ void Server::broadcastToOthers(const std::string& exclude_session_id, const std:
     int count = 0;
     for (const auto& session : sessions) {
         if (session->getSessionId() != exclude_session_id) {
+            // Skip if session is null or closed
+            if (!session || !session->isActive()) {
+                logger.trace("Skipping inactive session");
+                continue;
+            }
             session->send(message);
             count++;
         }
@@ -100,7 +112,9 @@ void Server::acceptLoop(std::stop_token st) {
     while (!st.stop_requested() && running.load()) {
         int client_fd = accept(server_fd, nullptr, nullptr);
 
-        // If no connection request, we use that time to clean up sessions
+        // If no connection request, we use that time to clean up sessions.
+        // TODO: replace occasional clean-up by callback function call triggered
+        // by session closing
         if (client_fd < 0) {
             cleanupDeadSessions();
             continue;
