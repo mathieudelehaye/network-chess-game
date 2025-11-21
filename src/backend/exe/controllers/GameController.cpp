@@ -11,6 +11,12 @@ GameController::GameController() : game_context_(std::make_unique<GameContext>()
     logger.debug("GameController initialised");
 }
 
+void GameController::setBroadcastCallback(BroadcastCallback callback) {
+    if (game_context_) {
+        game_context_->setBroadcastCallback(std::move(callback));
+    }
+}
+
 std::string GameController::routeMessage(const std::string& content,
                                          const std::string& session_id) {
     auto& logger = Logger::instance();
@@ -93,12 +99,6 @@ void GameController::routeDisconnect(const std::string& session_id) {
                                     {"status", "Waiting for players..."}};
             game_context_->broadcastToOthers(session_id, reset_broadcast);
         }
-    }
-}
-
-void GameController::setBroadcastCallback(BroadcastCallback callback) {
-    if (game_context_) {
-        game_context_->setBroadcastCallback(std::move(callback));
     }
 }
 

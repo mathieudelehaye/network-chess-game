@@ -6,10 +6,12 @@
 #include "GameController.hpp"
 #include "Logger.hpp"
 
-Session::Session(std::unique_ptr<ITransport> transport, std::shared_ptr<GameController> controller)
+Session::Session(
+    std::unique_ptr<ITransport> transport, std::shared_ptr<GameController> controller)
     : transport(std::move(transport)),
       controller(std::move(controller)),
       session_id_(generateSessionId()) {
+
     auto& logger = Logger::instance();
     logger.info("Session created: " + session_id_);
 }
@@ -85,19 +87,25 @@ void Session::send(const std::string& msg) const {
 }
 
 void Session::close() {
-    // Required to be consistent with the similar check in start().
     if (!active.exchange(false))
         return;
 
-    transport->close();
-
-    // Notify GameContext that this player disconnected
-    if (controller) {
-        controller->routeDisconnect(session_id_);
+    // Close transport
+    if (transport) {
+        transport->close();
+    }
+    
+    // Notify server about session closure
+    if (on_close_callback) {
+        on_close_callback(session_id_);
     }
 
     auto& logger = Logger::instance();
     logger.info("Session closed: " + session_id_);
+}
+
+void Session::setCloseCallback(CloseCallback callback) {
+    on_close_callback = std::move(callback);
 }
 
 std::string Session::generateSessionId() {

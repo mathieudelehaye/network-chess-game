@@ -39,10 +39,10 @@ class GameController:
             "state_name": self.context.get_state_name(),
             "player_color": self.context.player_color,
             "session_id": self.context.session_id,
+            "move_count": self.model.move_count,
             "current_turn": self.model.current_turn,
             "white_joined": self.model.white_joined,
             "black_joined": self.model.black_joined,
-            "move_count": self.model.move_count,
         }
         
         # Display menu using view

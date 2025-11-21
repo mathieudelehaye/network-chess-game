@@ -5,6 +5,7 @@ State management is handled by ClientContext.
 """
 
 from typing import Optional
+from utils.logger import Logger
 
 
 class GameModel:
@@ -29,15 +30,19 @@ class GameModel:
     
     def __init__(self):
         # Game data (not state - that's in ClientContext)
+        self._move_count = 0
         self._current_turn: Optional[str] = None
         self._white_joined = False
         self._black_joined = False
-        self._move_count = 0
     
     @property
-    def current_turn(self) -> Optional[str]:
+    def move_count(self) -> int:
+        return self._move_count
+
+    @property
+    def current_turn(self) -> bool:
         return self._current_turn
-    
+
     @property
     def white_joined(self) -> bool:
         return self._white_joined
@@ -45,10 +50,6 @@ class GameModel:
     @property
     def black_joined(self) -> bool:
         return self._black_joined
-    
-    @property
-    def move_count(self) -> int:
-        return self._move_count
     
     @property
     def both_players_joined(self) -> bool:
@@ -64,19 +65,20 @@ class GameModel:
     
     def start_game(self):
         """Initialise game data when game starts"""
+        self._move_count = 1
         self._current_turn = "white"  # White always starts
-        self._move_count = 0
     
     def update_turn(self, value: Optional[str]):
         """Update turn after a move"""
         self._move_count = int(value) if value else 0
+        self._current_turn = "white" if self._move_count % 2 == 1 else "black"
     
     def reset(self):
         """Reset all game data"""
-        self._current_turn = None
+        self._move_count = 1
+        self._current_turn = "white"
         self._white_joined = False
         self._black_joined = False
-        self._move_count = 0
     
     @staticmethod
     def build_move_description(strike: dict) -> str:
@@ -89,6 +91,9 @@ class GameModel:
         Returns:
             Human-readable move description
         """
+        logger = Logger()
+        logger.debug(f"Received strike: {strike}")
+
         msg = f"{strike['strike_number']}. {strike['color']} {strike['piece']}"
 
         if strike.get("is_castling"):
@@ -100,6 +105,8 @@ class GameModel:
             msg += f" on {strike['case_dest']}"
         else:
             msg += f" moves from {strike['case_src']} to {strike['case_dest']}"
+
+        logger.debug(f"Generated message: {msg}")
 
         return msg
     

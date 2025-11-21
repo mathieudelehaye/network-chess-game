@@ -3,9 +3,10 @@
 #include "GameState.hpp"
 #include "Logger.hpp"
 
-GameContext::GameContext()
-    : current_state_(std::make_unique<WaitingForPlayersState>()),
-      chess_game_(std::make_unique<ChessGame>()) {
+GameContext::GameContext():           
+    current_state_(std::make_unique<WaitingForPlayersState>()),
+    chess_game_(std::make_unique<ChessGame>()) {
+
     auto& logger = Logger::instance();
     logger.info("GameContext initialised");
 }

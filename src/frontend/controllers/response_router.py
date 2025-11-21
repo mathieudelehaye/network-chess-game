@@ -129,7 +129,8 @@ class ResponseRouter:
         suffix = self.model.build_strike_suffix(strike)
         self.view.display_info(description + suffix)
         
-        self.model.update_turn(strike.get("strike_number", None))
+        # Update turn to (1 + last move received from the server)
+        self.model.update_turn(strike.get("strike_number", None)+1)
         
         if strike.get('is_checkmate'):
             self.context.on_game_over()

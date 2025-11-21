@@ -23,7 +23,7 @@ struct FileUploadState {
  */
 
 class GameController {
-   public:
+public:
     GameController();
     ~GameController() = default;
 
@@ -40,7 +40,7 @@ class GameController {
 
     void setBroadcastCallback(BroadcastCallback callback);
 
-   private:
+private:
     std::string handleMessage(const std::string& session_id, const json& msg);
 
     /**

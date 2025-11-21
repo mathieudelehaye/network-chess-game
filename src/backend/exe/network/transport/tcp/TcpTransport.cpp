@@ -99,7 +99,6 @@ void TcpTransport::send(const std::string& data) {
  * @brief Closes the TCP socket and terminates the reading loop.
  */
 void TcpTransport::close() {
-    // Required to be consistent with the similar check in start().
     if (!running.exchange(false))
         return;
 

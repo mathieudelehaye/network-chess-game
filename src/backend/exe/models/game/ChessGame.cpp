@@ -13,14 +13,15 @@ std::optional<StrikeData> ChessGame::applyMove(const std::string& from, const st
         return std::nullopt;
     }
 
-    // Before applying the move, check what's on the destination square
-    auto destination = chess::Square(to);
-    auto captured = board_.at(destination);
+    StrikeData data;
+
+    fillStrikeDataBeforeMove(data, to);
 
     board_.makeMove(*move);
-    moveNumber_++;
 
-    return buildStrikeData(*move, captured);
+    fillStrikeDataAfterMove(data, *move);
+
+    return data;
 }
 
 chess::Color ChessGame::getCurrentPlayer() const {
@@ -82,28 +83,41 @@ std::optional<chess::Move> ChessGame::findMove(const std::string& from,
     return std::nullopt;
 }
 
-StrikeData ChessGame::buildStrikeData(
-    const chess::Move& move,
-    const chess::Piece& captured
+// TODO: consider returning a variable copy rather than passing the variable by
+// reference 
+void ChessGame::fillStrikeDataBeforeMove(
+    StrikeData& data,
+    const std::string& to
 ) const {
-    StrikeData data;
-    data.case_src = std::string(move.from());
-    data.case_dest = std::string(move.to());
-    data.piece = getPieceName(board_.at(move.to()).type());
-    
+    // Check what's on the destination square
+    auto destination = chess::Square(to);
+    auto captured = board_.at(destination);
+
     data.is_capture = (captured != chess::Piece::NONE);
-
-    data.is_check = inCheck();
-    data.is_checkmate = isCheckmate();
-    data.is_stalemate = isStalemate();
-    data.strike_number = moveNumber_;
-    data.color = (moveNumber_ % 2 == 1) ? "white" : "black";
-
+    
     if (data.is_capture) {
         data.captured_color = (moveNumber_ % 2 == 1) ? "black" : "white";
         data.captured_piece = getPieceName(captured.type());
     }
 
+    data.strike_number = moveNumber_;
+    data.color = (moveNumber_ % 2 == 1) ? "white" : "black";
+}
+
+// TODO: consider returning a variable copy rather than passing the variable by
+// reference 
+void ChessGame::fillStrikeDataAfterMove(
+    StrikeData& data,
+    const chess::Move& move
+) const {
+    data.case_src = std::string(move.from());
+    data.case_dest = std::string(move.to());
+    data.piece = getPieceName(board_.at(move.to()).type());
+    
+    data.is_check = inCheck();
+    data.is_checkmate = isCheckmate();
+    data.is_stalemate = isStalemate();
+    
     if (move.typeOf() == chess::Move::CASTLING) {
         data.is_castling = true;
         
@@ -112,8 +126,6 @@ StrikeData ChessGame::buildStrikeData(
         // Queen-side castling: king moves to c-file
         data.castling_type = (move.to().file() == chess::File::FILE_G) ? "little" : "big";
     }
-
-    return data;
 }
 
 std::string ChessGame::getPieceName(chess::PieceType type) const {
