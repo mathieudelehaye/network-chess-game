@@ -38,12 +38,13 @@ void Server::setupSendCallbacks() {
             logger.trace("Unicast callback called with message: " + message);
 
             this->unicastTo(session_id, msg);
-        }
-        , [this](const std::string& originating_session_id, const json& msg, bool to_all) {
+        },
+        [this](const std::string& originating_session_id, const json& msg, bool to_all) {
             auto& logger = Logger::instance();
 
             std::string message = msg.dump();
-            logger.trace("Broadcast callback called with message: `" + message + "` sent to " + (to_all ? "all" : ("others than " + originating_session_id)));
+            logger.trace("Broadcast callback called with message: `" + message + "` sent to " +
+                         (to_all ? "all" : ("others than " + originating_session_id)));
 
             if (to_all) {
                 this->broadcastToAll(message);
@@ -196,10 +197,11 @@ void Server::unicastTo(const std::string& session_id, const std::string& message
     auto& logger = Logger::instance();
     logger.debug("Unicasting to " + session_id + ": " + message);
 
-    auto it = std::find_if(sessions.begin(), sessions.end(),
-                               [&session_id](const std::pair<const std::string, std::shared_ptr<Session>>& pair) {
-                                   return pair.first == session_id;
-                               });
+    auto it = std::find_if(
+        sessions.begin(), sessions.end(),
+        [&session_id](const std::pair<const std::string, std::shared_ptr<Session>>& pair) {
+            return pair.first == session_id;
+        });
 
     if (it != sessions.end()) {
         it->second->send(message);
@@ -258,10 +260,11 @@ void Server::cleanupClosedSessions() {
     // Remove sessions from the main list
     std::lock_guard<std::mutex> lock(sessions_mutex_);
     for (const auto& session_id : to_cleanup) {
-        auto it = std::find_if(sessions.begin(), sessions.end(),
-                               [&session_id](const std::pair<const std::string, std::shared_ptr<Session>>& pair) {
-                                   return pair.first == session_id;
-                               });
+        auto it = std::find_if(
+            sessions.begin(), sessions.end(),
+            [&session_id](const std::pair<const std::string, std::shared_ptr<Session>>& pair) {
+                return pair.first == session_id;
+            });
 
         if (it != sessions.end()) {
             logger.debug("Removing session from list: " + session_id);

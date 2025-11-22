@@ -8,14 +8,10 @@
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
 
-using UnicastCallback = std::function<void(
-    const std::string& session_id,
-    const json& message)>;
+using UnicastCallback = std::function<void(const std::string& session_id, const json& message)>;
 
-using BroadcastCallback = std::function<void(
-    const std::string& originating_session_id,
-    const json& message, 
-    bool to_all)>;
+using BroadcastCallback = std::function<void(const std::string& originating_session_id,
+                                             const json& message, bool to_all)>;
 
 /**
  * @brief Manages game session state and transitions

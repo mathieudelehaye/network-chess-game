@@ -16,8 +16,8 @@ void GameController::setSendCallbacks(UnicastCallback unicast, BroadcastCallback
     }
 }
 
-std::string GameController::routeMessage(const std::string& content,
-                                         const std::string& session_id) {
+std::optional<std::string> GameController::routeMessage(const std::string& content,
+                                                        const std::string& session_id) {
     // Parse application message (should be JSON)
     try {
         json msg = json::parse(content);
@@ -63,7 +63,6 @@ void GameController::routeDisconnect(const std::string& session_id) {
 
     // Thread-safe instruction block
     {
-        // Lock the game context
         std::lock_guard<std::mutex> lock(game_context_->getMutex());
 
         // Check if this session was a player
@@ -98,7 +97,8 @@ void GameController::routeDisconnect(const std::string& session_id) {
     }
 }
 
-std::string GameController::handleMessage(const std::string& session_id, const json& msg) {
+std::optional<std::string> GameController::handleMessage(const std::string& session_id,
+                                                         const json& msg) {
     logger_.debug("Routing message for session: " + session_id);
 
     // Command-based routing
@@ -150,7 +150,7 @@ std::string GameController::handleStartGame(const std::string& session_id) {
 
     // Thread-safe instruction block
     {
-        // Lock the game context
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
         response = game_context_->handleStartRequest(session_id);
     }
 
@@ -180,7 +180,7 @@ std::string GameController::handleParsedMove(const std::string& session_id, cons
 
     // Thread-safe instruction block
     {
-        // Lock the game context
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
         response = game_context_->handleMoveRequest(session_id, from, to);
     }
 
@@ -194,7 +194,7 @@ std::string GameController::handleEndGame(const std::string& session_id) {
 
     // Thread-safe instruction block
     {
-        // Lock the game context
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
         response = game_context_->handleEndRequest(session_id);
     }
 
@@ -208,8 +208,8 @@ std::string GameController::handleDisplayBoard() {
 
     // Thread-safe instruction block
     {
-        // Lock the game context
-        response = game_context_->handleDisplayBoard();  // ← Delegate to context
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
+        response = game_context_->handleDisplayBoard();
     }
 
     return response.dump();
@@ -217,10 +217,8 @@ std::string GameController::handleDisplayBoard() {
 
 // TODO: file chunk upload and file reconstruction should be moved to a separate
 // class in the Utils part of the backend source code.
-std::string GameController::handleFileUploadChunk(
-    const nlohmann::json& msg,
-    const std::string& session_id) {
-
+std::optional<std::string> GameController::handleFileUploadChunk(const nlohmann::json& msg,
+                                                                 const std::string& session_id) {
     try {
         auto metadata = msg["metadata"];
         std::string filename = metadata["filename"];
@@ -261,7 +259,7 @@ std::string GameController::handleFileUploadChunk(
             file_uploads_.erase(upload_key);
 
             // Return empty string - responses already sent progressively
-            return "";
+            return std::nullopt;
         }
 
         // Return progress acknowledgment for intermediate chunks
@@ -283,28 +281,23 @@ std::string GameController::handleFileUploadChunk(
     }
 }
 
-void GameController::processFileContent(
-    const std::string& session_id, 
-    const std::string& filename, 
-    const std::string& data) {
-
+void GameController::processFileContent(const std::string& session_id, const std::string& filename,
+                                        const std::string& data) {
     MoveParser parser;
     auto moves = parser.parseGame(data);
 
     if (moves.empty()) {
         logger_.warning("No valid moves found in game file");
-        
-        json error_response = {
-            {"type", "game_complete"},
-            {"filename", filename},
-            {"total_moves", 0},
-            {"error", "No valid moves found. Check file format."}
-        };
-        
+
+        json error_response = {{"type", "game_complete"},
+                               {"filename", filename},
+                               {"total_moves", 0},
+                               {"error", "No valid moves found. Check file format."}};
+
         game_context_->unicast(session_id, error_response.dump());
         return;
     }
-    
+
     logger_.info("Parsed " + std::to_string(moves.size()) + " moves from file");
 
     // Execute each move and send move_result
@@ -319,10 +312,10 @@ void GameController::processFileContent(
         try {
             std::string move_response = handleParsedMove(session_id, move.from, move.to);
             json move_json = json::parse(move_response);
-            
+
             // Small delay to allow client to process
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            
+
             // Check if move failed
             if (move_json.contains("type") && move_json["type"] == "error") {
                 logger_.warning("Error at move " + std::to_string(i + 1));
@@ -332,9 +325,9 @@ void GameController::processFileContent(
 
             // Send move_result immediately to client
             game_context_->unicast(session_id, move_response);
-            
+
             successful_moves++;
-            
+
             // Check if game is over
             if (move_json.contains("strike")) {
                 auto strike = move_json["strike"];
@@ -344,7 +337,7 @@ void GameController::processFileContent(
                     break;
                 }
             }
-            
+
         } catch (const std::exception& e) {
             logger_.error("Exception at move " + std::to_string(i + 1) + ": " + e.what());
             last_error = e.what();
@@ -354,17 +347,15 @@ void GameController::processFileContent(
 
     if (game_complete) {
         // Send final game_complete message
-        json final_response = {
-            {"type", "game_complete"},
-            {"filename", filename},
-            {"total_moves", successful_moves},
-            {"requested_moves", moves.size()}
-        };
-        
+        json final_response = {{"type", "game_complete"},
+                               {"filename", filename},
+                               {"total_moves", successful_moves},
+                               {"requested_moves", moves.size()}};
+
         if (!last_error.empty()) {
             final_response["error"] = last_error;
         }
-        
+
         game_context_->unicast(session_id, final_response);
     }
 }

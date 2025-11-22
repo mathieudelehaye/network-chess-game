@@ -41,7 +41,7 @@ class ChessGame {
     /**
      * @brief Get ASCII representation of board
      */
-    std::string getBoardASCII() const;
+    std::string getBoardFormatted() const;
 
     /**
      * @brief Reset to starting position

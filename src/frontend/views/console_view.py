@@ -84,6 +84,7 @@ class ConsoleView:
             print()
             print("Special commands:")
             if player_number == 1:
+                print("  :r             => restart game")
                 print("  :f <file name> => upload game file")
             print("  :d             => display board")
             print("  :q             => quit")
@@ -109,25 +110,46 @@ class ConsoleView:
     def get_game_input(self, single_player: bool) -> tuple[str, ...]:
         """Get move from user (e.g., 'e2-e4'). Special commands
         are also allowed, including:
+          - `:r                 => restart (only in single player mode)
           - `:f <file name>`    => upload game file (only in single player mode)
           - `:d`                => display board
           - `:q`                => quit the game
         """
         command = input("Enter move (or special command): ").strip()
+
+        # Handle empty input
+        if not command:
+            return (None, None)
+        
+        # Handle special commands
         if command[0] == ':':
-            # special command
-            if single_player and command[1] == 'f':
-                pos = command.find(' ')
-                return ('f', command[pos:].strip())
+            if len(command) < 2:
+                self.display_error("Invalid command")
+                return (None, None)
+        
+            if single_player:
+                if command[1] == 'r':
+                    return ('r', None)
+                if command[1] == 'f':
+                    pos = command[2:].find(' ')
+                    if pos == -1:
+                        self.display_error("Invalid file command. Usage: :f <file name>")
+                        return (None, None)
+                    file_path = command[2 + pos:].strip()
+                    return ('f', file_path)
+            
             if command[1] == 'd':
-                return ('d')
+                return ('d', None)
+            
             if command[1] == 'q':
-                return ('q')
+                return ('q', None)
+            
+        # Handle regular move
         if '-' in command:
-            # game move
-            # send the whole move, since the server will parse it
             return ('m', command)
-        return None, None
+        
+        self.display_error("Invalid input format")
+        return (None, None)
     
     def get_user_choice(self) -> str:
         """Get user menu choice"""

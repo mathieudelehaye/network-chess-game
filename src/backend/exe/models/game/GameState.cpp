@@ -62,15 +62,15 @@ json WaitingForPlayersState::handleJoinRequestAsSinglePlayer(GameContext* contex
     logger.info("Player " + player_id + " joined as single player");
 
     logger.info("Single player joined! Ready to start.");
-    
+
     // Transition to InProgressState
     context->transitionTo(std::make_unique<InProgressState>());
 
     json join_response = {{"type", "join_success"},
-    {"session_id", player_id},
-    {"status", context->getStatusMessage()},
-    {"single_player", true}};
-    
+                          {"session_id", player_id},
+                          {"status", context->getStatusMessage()},
+                          {"single_player", true}};
+
     // Send response to the single player
     return join_response;
 }
@@ -159,13 +159,16 @@ json InProgressState::handleEndRequest(GameContext* context, const std::string& 
 }
 
 json InProgressState::handleDisplayBoard(GameContext* context) {
+    auto& logger = Logger::instance();
     auto* game = context->getChessGame();
+
     if (!game) {
         return buildError("Game not initialised");
     }
 
     try {
-        std::string boardASCII = game->getBoardASCII();
+        std::string boardASCII = game->getBoardFormatted();
+        logger.trace("Received ASCII board: " + boardASCII);
 
         json response;
         response["type"] = "board_display";
@@ -175,7 +178,6 @@ json InProgressState::handleDisplayBoard(GameContext* context) {
         return response;
 
     } catch (const std::exception& e) {
-        auto& logger = Logger::instance();
         logger.error("Failed to display board: " + std::string(e.what()));
 
         return buildError("Failed to display board");

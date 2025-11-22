@@ -13,7 +13,7 @@
  * Logs to both console and file.
  */
 class Logger {
-public:
+   public:
     /**
      * @brief Get the logger instance.
      * @return Reference to the logger instance
@@ -64,7 +64,7 @@ public:
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
 
-private:
+   private:
     /**
      * @brief Private constructor (Singleton)
      */

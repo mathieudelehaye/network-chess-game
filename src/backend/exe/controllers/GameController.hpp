@@ -32,9 +32,10 @@ class GameController {
      * @brief Route a message (should be JSON)
      * @param content Raw message as string
      * @param session_id Unique identifier for the client session
-     * @return JSON response as string
+     * @return JSON response as string (optional)
      */
-    std::string routeMessage(const std::string& content, const std::string& session_id);
+    std::optional<std::string> routeMessage(const std::string& content,
+                                            const std::string& session_id);
 
     // Could be an internal message, but it seems more straighforward that way.
     void routeDisconnect(const std::string& session_id);
@@ -42,7 +43,7 @@ class GameController {
     void setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast);
 
    private:
-    std::string handleMessage(const std::string& session_id, const json& msg);
+    std::optional<std::string> handleMessage(const std::string& session_id, const json& msg);
 
     /**
      * @brief Handle join_game command
@@ -98,9 +99,11 @@ class GameController {
      * @param session_id Client session ID
      * @return JSON response
      */
-    std::string handleFileUploadChunk(const nlohmann::json& msg, const std::string& session_id);
+    std::optional<std::string> handleFileUploadChunk(const nlohmann::json& msg,
+                                                     const std::string& session_id);
 
-    void processFileContent(const std::string& session_id, const std::string& filename, const std::string& data);
+    void processFileContent(const std::string& session_id, const std::string& filename,
+                            const std::string& data);
 
     // State machine for all game modes
     std::unique_ptr<GameContext> game_context_;

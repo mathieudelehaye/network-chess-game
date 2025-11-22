@@ -73,8 +73,10 @@ void Session::handleMessage(const std::string& message) {
     auto response = controller->routeMessage(message, session_id_);
 
     // Send response to requesting client
-    send(response);
-    logger.debug("Sent response: " + response);
+    if (response.has_value()) {
+        send(*response);
+        logger.debug("Sent response: " + *response);
+    }
 }
 
 void Session::send(const std::string& msg) const {

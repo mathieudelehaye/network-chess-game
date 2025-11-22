@@ -148,8 +148,11 @@ class GameController:
             self.show_menu()
             
             # Get user input
-            choice = self.wait_for_input()
-            
+            while True:
+                choice = self.wait_for_input()
+                if choice[0]:
+                    break
+
             # Handle quit
             if choice[0].lower() == 'q':
                 if self.view.confirm_action("Are you sure you want to quit?"):
@@ -215,15 +218,14 @@ class GameController:
                         
             # STATE: PLAYING (can move/use special command)
             elif state == ClientState.PLAYING:
-                print(choice)
-
                 # special commands
                 if choice[0] == 'd':
                     # display board
-                    pass
-                    # TODO: implement displaying board
-                    # self.send_display_board()
-                elif choice[0] == 'f':
+                    self.send_display_board()
+                elif self.context.player_number == 1 and choice[0] == 'r':
+                    # end game
+                    self.send_end_game()
+                elif self.context.player_number == 1 and choice[0] == 'f':
                     # upload game
                     self.run_file_mode(choice[1])
                 elif choice[0] == 'm':
@@ -238,6 +240,12 @@ class GameController:
             self.logger_.error(f"Error handling choice: {e}")
             self.view.display_error(f"Error: {e}")
     
+    # TODO: implement a waiting mechanism, because for now the app will upload
+    # the game file, then return to the main game loop (if interactive mode is
+    # used), and the main menu will be displayed then polluted by the
+    # move_result responses from the server. So, client should wait until all
+    # move_result responses are received (or a timeout has ellapsed) before
+    # re-displaying the menu.
     def run_file_mode(self, 
         file_path: Path, 
         chunk_size: int = 4096) -> bool:

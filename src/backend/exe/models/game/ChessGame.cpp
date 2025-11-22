@@ -37,12 +37,6 @@ std::string ChessGame::getFEN() const {
     return board_.getFen();
 }
 
-std::string ChessGame::getBoardASCII() const {
-    std::ostringstream oss;
-    oss << board_;
-    return oss.str();
-}
-
 bool ChessGame::isLegalMove(const std::string& from, const std::string& to) const {
     return findMove(from, to).has_value();
 }
@@ -80,15 +74,13 @@ std::optional<chess::Move> ChessGame::findMove(const std::string& from,
     chess::Square to_sq(to);
 
     auto& logger = Logger::instance();
-    
+
     if (logger.isLevelTrace()) {
-        std::ostringstream traceStream; 
+        std::ostringstream traceStream;
 
         for (const auto& move : moves) {
-            traceStream << "Move from: " << move.from() 
-                        << ", to: " << move.to() 
-                        << ", isCastling: " << (move.typeOf() == chess::Move::CASTLING) 
-                        << "\n";
+            traceStream << "Move from: " << move.from() << ", to: " << move.to()
+                        << ", isCastling: " << (move.typeOf() == chess::Move::CASTLING) << "\n";
         }
 
         logger.trace(traceStream.str());
@@ -156,4 +148,69 @@ std::string ChessGame::getPieceName(chess::PieceType type) const {
     if (type == chess::PieceType::KING)
         return "king";
     return "unknown";
+}
+
+std::string ChessGame::getBoardFormatted() const {
+    std::ostringstream oss;
+    oss << board_;
+    std::string ascii_board = oss.str();
+
+    // Extract only the board lines (first 8 lines)
+    std::vector<std::string> lines;
+    std::istringstream stream(ascii_board);
+    std::string line;
+
+    while (std::getline(stream, line) && lines.size() < 8) {
+        lines.push_back(line);
+    }
+
+    if (lines.size() != 8) {
+        return "Error: Invalid board format";
+    }
+
+    std::ostringstream result;
+
+    // Top file labels
+    result << "  a   b   c   d   e   f   g   h\n";
+    result << " ---------------------------------\n";
+
+    // Process each rank (8 to 1)
+    for (int rank = 0; rank < 8; ++rank) {
+        int rank_num = 8 - rank;
+
+        // Parse pieces from the line
+        std::vector<char> pieces;
+        std::istringstream line_stream(lines[rank]);
+        char piece;
+
+        while (line_stream >> piece) {
+            pieces.push_back(piece);
+        }
+
+        if (pieces.size() != 8) {
+            return "Error: Invalid board row";
+        }
+
+        // Build the row
+        result << rank_num << " |";
+
+        for (char p : pieces) {
+            // Convert knight 'n' to 'c' and empty '.' to space
+            if (p == 'n')
+                p = 'c';
+            else if (p == 'N')
+                p = 'C';
+            else if (p == '.')
+                p = ' ';
+
+            result << " " << p << " |";
+        }
+
+        result << "\n ---------------------------------\n";
+    }
+
+    // Bottom file labels
+    result << "  a   b   c   d   e   f   g   h\n";
+
+    return result.str();
 }
