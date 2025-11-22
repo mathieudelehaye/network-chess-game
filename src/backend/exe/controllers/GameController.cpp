@@ -10,9 +10,9 @@ GameController::GameController()
     logger_.debug("GameController initialised");
 }
 
-void GameController::setBroadcastCallback(BroadcastCallback callback) {
+void GameController::setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast) {
     if (game_context_) {
-        game_context_->setBroadcastCallback(std::move(callback));
+        game_context_->setSendCallbacks(std::move(unicast), std::move(broadcast));
     }
 }
 
@@ -217,8 +217,10 @@ std::string GameController::handleDisplayBoard() {
 
 // TODO: file chunk upload and file reconstruction should be moved to a separate
 // class in the Utils part of the backend source code.
-std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
-                                                  const std::string& session_id) {
+std::string GameController::handleFileUploadChunk(
+    const nlohmann::json& msg,
+    const std::string& session_id) {
+
     try {
         auto metadata = msg["metadata"];
         std::string filename = metadata["filename"];
@@ -251,43 +253,24 @@ std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
         logger_.info("Upload progress " + filename + ": " + std::to_string(percent) + "% (" +
                      std::to_string(chunk_current) + "/" + std::to_string(chunks_total) + ")");
 
+        if (chunk_current >= chunks_total) {
+            logger_.info("File upload complete: " + filename);
+            processFileContent(session_id, filename, upload.accumulated_data);
+
+            // Clean up upload state
+            file_uploads_.erase(upload_key);
+
+            // Return empty string - responses already sent progressively
+            return "";
+        }
+
+        // Return progress acknowledgment for intermediate chunks
         json ack;
         ack["type"] = "upload_progress";
         ack["filename"] = filename;
         ack["chunk_received"] = chunk_current;
         ack["chunks_total"] = chunks_total;
         ack["percent"] = percent;
-
-        if (chunk_current >= chunks_total) {
-            logger_.info("File upload complete: " + filename);
-
-            MoveParser parser;
-            auto moves = parser.parseGame(upload.accumulated_data);
-
-            // TODO: possibly run the parsed moves in a separate function
-            json responses = json::array();
-            for (size_t i = 0; i < moves.size(); ++i) {
-                const auto& move = moves[i];
-                std::string move_response = handleParsedMove(session_id, move.from, move.to);
-                json move_json = json::parse(move_response);
-                responses.push_back(move_json);
-
-                if (move_json.contains("type") && move_json["type"] == "error") {
-                    logger_.warning("Error at move " + std::to_string(i + 1));
-                    break;
-                }
-            }
-
-            file_uploads_.erase(upload_key);
-
-            json final_response;
-            final_response["type"] = "game_complete";
-            final_response["filename"] = filename;
-            final_response["total_moves"] = responses.size();
-            final_response["moves"] = responses;
-            return final_response.dump();
-        }
-
         return ack.dump();
 
     } catch (const json::exception& e) {
@@ -297,5 +280,91 @@ std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
         error["type"] = "error";
         error["error"] = "Invalid upload chunk format";
         return error.dump();
+    }
+}
+
+void GameController::processFileContent(
+    const std::string& session_id, 
+    const std::string& filename, 
+    const std::string& data) {
+
+    MoveParser parser;
+    auto moves = parser.parseGame(data);
+
+    if (moves.empty()) {
+        logger_.warning("No valid moves found in game file");
+        
+        json error_response = {
+            {"type", "game_complete"},
+            {"filename", filename},
+            {"total_moves", 0},
+            {"error", "No valid moves found. Check file format."}
+        };
+        
+        game_context_->unicast(session_id, error_response.dump());
+        return;
+    }
+    
+    logger_.info("Parsed " + std::to_string(moves.size()) + " moves from file");
+
+    // Execute each move and send move_result
+    int successful_moves = 0;
+    std::string last_error;
+
+    bool game_complete = false;
+
+    for (size_t i = 0; i < moves.size(); ++i) {
+        const auto& move = moves[i];
+
+        try {
+            std::string move_response = handleParsedMove(session_id, move.from, move.to);
+            json move_json = json::parse(move_response);
+            
+            // Small delay to allow client to process
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            
+            // Check if move failed
+            if (move_json.contains("type") && move_json["type"] == "error") {
+                logger_.warning("Error at move " + std::to_string(i + 1));
+                last_error = move_json.value("error", "Unknown error");
+                break;
+            }
+
+            // Send move_result immediately to client
+            game_context_->unicast(session_id, move_response);
+            
+            successful_moves++;
+            
+            // Check if game is over
+            if (move_json.contains("strike")) {
+                auto strike = move_json["strike"];
+                if (strike.value("checkmate", false) || strike.value("stalemate", false)) {
+                    logger_.info("Game ended at move " + std::to_string(i + 1));
+                    game_complete = true;
+                    break;
+                }
+            }
+            
+        } catch (const std::exception& e) {
+            logger_.error("Exception at move " + std::to_string(i + 1) + ": " + e.what());
+            last_error = e.what();
+            break;
+        }
+    }
+
+    if (game_complete) {
+        // Send final game_complete message
+        json final_response = {
+            {"type", "game_complete"},
+            {"filename", filename},
+            {"total_moves", successful_moves},
+            {"requested_moves", moves.size()}
+        };
+        
+        if (!last_error.empty()) {
+            final_response["error"] = last_error;
+        }
+        
+        game_context_->unicast(session_id, final_response);
     }
 }

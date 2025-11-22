@@ -39,7 +39,7 @@ class GameController {
     // Could be an internal message, but it seems more straighforward that way.
     void routeDisconnect(const std::string& session_id);
 
-    void setBroadcastCallback(BroadcastCallback callback);
+    void setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast);
 
    private:
     std::string handleMessage(const std::string& session_id, const json& msg);
@@ -99,6 +99,8 @@ class GameController {
      * @return JSON response
      */
     std::string handleFileUploadChunk(const nlohmann::json& msg, const std::string& session_id);
+
+    void processFileContent(const std::string& session_id, const std::string& filename, const std::string& data);
 
     // State machine for all game modes
     std::unique_ptr<GameContext> game_context_;

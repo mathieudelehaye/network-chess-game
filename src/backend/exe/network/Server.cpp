@@ -26,17 +26,24 @@ Server::Server(NetworkMode mode, const std::string& ip, int port)
             break;
     }
 
-    setupBroadcastCallback();
+    setupSendCallbacks();
 }
 
-void Server::setupBroadcastCallback() {
-    shared_controller_->setBroadcastCallback(
-        [this](const std::string& originating_session_id, const json& msg, bool to_all) {
+void Server::setupSendCallbacks() {
+    shared_controller_->setSendCallbacks(
+        [this](const std::string& session_id, const json& msg) {
             auto& logger = Logger::instance();
-            logger.debug("Server::setupBroadcastCallback");
 
             std::string message = msg.dump();
-            logger.debug("Server::setupBroadcastCallback: message = " + message);
+            logger.trace("Unicast callback called with message: " + message);
+
+            this->unicastTo(session_id, msg);
+        }
+        , [this](const std::string& originating_session_id, const json& msg, bool to_all) {
+            auto& logger = Logger::instance();
+
+            std::string message = msg.dump();
+            logger.trace("Broadcast callback called with message: `" + message + "` sent to " + (to_all ? "all" : ("others than " + originating_session_id)));
 
             if (to_all) {
                 this->broadcastToAll(message);
@@ -66,8 +73,8 @@ void Server::stop() {
     // Shutdown all sessions
     {
         std::lock_guard<std::mutex> lock(sessions_mutex_);
-        for (auto& s : sessions) {
-            s->close();
+        for (const auto& session : sessions) {
+            session.second->close();
         }
     }
 
@@ -104,7 +111,7 @@ void Server::acceptLoop(std::stop_token st) {
         {
             // Add the session to the list of active sessions (thread-safe)
             std::lock_guard<std::mutex> lock(sessions_mutex_);
-            sessions.push_back(session);
+            sessions[session->getSessionId()] = session;
         }
 
         // Start the session (e.g., begin receiving messages)
@@ -150,11 +157,11 @@ void Server::broadcastToAll(const std::string& message) {
     int count = 0;
     for (const auto& session : sessions) {
         // Skip if session is null or closed
-        if (!session || !session->isActive()) {
+        if (!session.second || !session.second->isActive()) {
             logger.trace("Skipping inactive session");
             continue;
         }
-        session->send(message);
+        session.second->send(message);
         count++;
     }
 
@@ -169,18 +176,37 @@ void Server::broadcastToOthers(const std::string& exclude_session_id, const std:
 
     int count = 0;
     for (const auto& session : sessions) {
-        if (session->getSessionId() != exclude_session_id) {
+        if (session.second->getSessionId() != exclude_session_id) {
             // Skip if session is null or closed
-            if (!session || !session->isActive()) {
+            if (!session.second || !session.second->isActive()) {
                 logger.trace("Skipping inactive session");
                 continue;
             }
-            session->send(message);
+            session.second->send(message);
             count++;
         }
     }
 
     logger.debug("Broadcast sent to " + std::to_string(count) + " sessions");
+}
+
+void Server::unicastTo(const std::string& session_id, const std::string& message) {
+    std::lock_guard<std::mutex> lock(sessions_mutex_);
+
+    auto& logger = Logger::instance();
+    logger.debug("Unicasting to " + session_id + ": " + message);
+
+    auto it = std::find_if(sessions.begin(), sessions.end(),
+                               [&session_id](const std::pair<const std::string, std::shared_ptr<Session>>& pair) {
+                                   return pair.first == session_id;
+                               });
+
+    if (it != sessions.end()) {
+        it->second->send(message);
+        logger.debug("Unicast sent");
+    } else {
+        logger.warning("Couldn't send unicast: session not found");
+    }
 }
 
 void Server::handleSessionClosed(const std::string& session_id) {
@@ -233,8 +259,8 @@ void Server::cleanupClosedSessions() {
     std::lock_guard<std::mutex> lock(sessions_mutex_);
     for (const auto& session_id : to_cleanup) {
         auto it = std::find_if(sessions.begin(), sessions.end(),
-                               [&session_id](const std::shared_ptr<Session>& s) {
-                                   return s->getSessionId() == session_id;
+                               [&session_id](const std::pair<const std::string, std::shared_ptr<Session>>& pair) {
+                                   return pair.first == session_id;
                                });
 
         if (it != sessions.end()) {

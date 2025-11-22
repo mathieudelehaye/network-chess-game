@@ -8,8 +8,14 @@
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
 
-using BroadcastCallback = std::function<void(const std::string& originating_session_id,
-                                             const json& message, bool to_all)>;
+using UnicastCallback = std::function<void(
+    const std::string& session_id,
+    const json& message)>;
+
+using BroadcastCallback = std::function<void(
+    const std::string& originating_session_id,
+    const json& message, 
+    bool to_all)>;
 
 /**
  * @brief Manages game session state and transitions
@@ -21,7 +27,8 @@ class GameContext {
     GameContext();
     ~GameContext() = default;
 
-    void setBroadcastCallback(BroadcastCallback callback);
+    void setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast);
+    void unicast(const std::string& session_id, const json& message);
     void broadcastToAll(const std::string& session_id, const json& message);
     void broadcastToOthers(const std::string& session_id, const json& message);
 
@@ -62,6 +69,7 @@ class GameContext {
    private:
     std::unique_ptr<IGameState> current_state_;
     std::unique_ptr<ChessGame> chess_game_;
+    UnicastCallback unicast_callback_;
     BroadcastCallback broadcast_callback_;
     std::string white_player_id_;
     std::string black_player_id_;

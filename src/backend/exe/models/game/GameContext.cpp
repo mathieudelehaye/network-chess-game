@@ -10,8 +10,15 @@ GameContext::GameContext()
     logger.info("GameContext initialised");
 }
 
-void GameContext::setBroadcastCallback(BroadcastCallback callback) {
-    broadcast_callback_ = std::move(callback);
+void GameContext::setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast) {
+    unicast_callback_ = std::move(unicast);
+    broadcast_callback_ = std::move(broadcast);
+}
+
+void GameContext::unicast(const std::string& session_id, const json& message) {
+    if (unicast_callback_) {
+        unicast_callback_(session_id, message);
+    }
 }
 
 void GameContext::broadcastToAll(const std::string& session_id, const json& message) {
