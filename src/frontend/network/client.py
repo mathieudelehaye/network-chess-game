@@ -1,4 +1,5 @@
 import socket
+from pathlib import Path
 from typing import Optional
 from controllers.game_controller import GameController
 from controllers.response_router import ResponseRouter
@@ -27,7 +28,7 @@ class Client:
         self.port = port
         self.game_file = game_file
         
-        self._logger = Logger()
+        self.logger_ = Logger()
         self.socket: Optional[socket.socket] = None
         self.session: Optional[ClientSession] = None
         self.controller: Optional[GameController] = None
@@ -37,8 +38,9 @@ class Client:
         Start client - create session and call controller, since the client
         leads interactions with the server. 
 
+        @param file_name The game file to use (if any).
         """
-        self._logger.info(f"Connecting to {self.port}:{self.port}")
+        self.logger_.info(f"Connecting to {self.port}:{self.port}")
         
         # Connect (create socket)
         if not self._connect():
@@ -61,14 +63,14 @@ class Client:
         # Start session to begin receive loop
         self.session.start()
         
-        self._logger.info(f"Client started on {self.mode.value}")
+        self.logger_.info(f"Client started on {self.mode.value}")
 
         # Run appropriate mode based on file
-        if self.game_file:
-            self._logger.info(f"Running file mode: {self.game_file}")
+        if self.game_file and self.game_file.strip() != "":
+            self.logger_.info(f"Running file mode: {self.game_file}")
             self.controller.run_file_mode(self.game_file)
         else:
-            self._logger.info("Running interactive mode")
+            self.logger_.info("Running interactive mode")
             self.controller.run_interactive_mode()
 
     def _connect(self) -> bool:
@@ -76,7 +78,7 @@ class Client:
         Connect to server and create socket
         """
         try:
-            self._logger.info(f"Connecting to {self.host}:{self.port}...")
+            self.logger_.info(f"Connecting to {self.host}:{self.port}...")
 
             if self.mode == NetworkMode.IPC:
                 self.socket = self._connect_ipc()
@@ -84,13 +86,13 @@ class Client:
                 self.socket = self._connect_tcp()
 
             if not self.socket:
-                self._logger.error("Failed to create socket")
+                self.logger_.error("Failed to create socket")
                 return False
 
             return True
 
         except (OSError, socket.error, ConnectionRefusedError, TimeoutError) as e:
-            self._logger.error(f"Connection failed: {e}")
+            self.logger_.error(f"Connection failed: {e}")
             return False
 
     def _connect_tcp(self) -> Optional[socket.socket]:
@@ -98,15 +100,15 @@ class Client:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((self.host, self.port))
-            self._logger.debug(f"TCP socket connected: fd={sock.fileno()}")
+            self.logger_.debug(f"TCP socket connected: fd={sock.fileno()}")
             return sock
         except OSError as e:
-            self._logger.error(f"TCP connection failed: {e}")
+            self.logger_.error(f"TCP connection failed: {e}")
             return None
 
     def _connect_ipc(self) -> Optional[socket.socket]:
         """Create Unix domain socket and connect"""
-        self._logger.error("IPC mode not yet implemented")
+        self.logger_.error("IPC mode not yet implemented")
         return None
 
     def stop(self):
@@ -129,4 +131,4 @@ class Client:
                     pass
                 self.socket = None
 
-        self._logger.info("Client stopped")
+        self.logger_.info("Client stopped")

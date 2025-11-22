@@ -1,14 +1,13 @@
 #include "GameController.hpp"
 
 #include "GameContext.hpp"
-#include "Logger.hpp"
 #include "MoveParser.hpp"
 
 using json = nlohmann::json;
 
-GameController::GameController() : game_context_(std::make_unique<GameContext>()) {
-    auto& logger = Logger::instance();
-    logger.debug("GameController initialised");
+GameController::GameController()
+    : game_context_(std::make_unique<GameContext>()), logger_(Logger::instance()) {
+    logger_.debug("GameController initialised");
 }
 
 void GameController::setBroadcastCallback(BroadcastCallback callback) {
@@ -19,8 +18,6 @@ void GameController::setBroadcastCallback(BroadcastCallback callback) {
 
 std::string GameController::routeMessage(const std::string& content,
                                          const std::string& session_id) {
-    auto& logger = Logger::instance();
-
     // Parse application message (should be JSON)
     try {
         json msg = json::parse(content);
@@ -28,7 +25,7 @@ std::string GameController::routeMessage(const std::string& content,
         return handleMessage(session_id, msg);
 
     } catch (const json::parse_error& e) {
-        logger.error("JSON parse error: " + std::string(e.what()));
+        logger_.error("JSON parse error: " + std::string(e.what()));
 
         json error;
         error["type"] = "error";
@@ -37,7 +34,7 @@ std::string GameController::routeMessage(const std::string& content,
         return error.dump();
 
     } catch (const json::exception& e) {
-        logger.error("JSON error: " + std::string(e.what()));
+        logger_.error("JSON error: " + std::string(e.what()));
 
         json error;
         error["type"] = "error";
@@ -45,7 +42,7 @@ std::string GameController::routeMessage(const std::string& content,
         return error.dump();
 
     } catch (const std::exception& e) {
-        logger.critical("Unexpected error: " + std::string(e.what()));
+        logger_.critical("Unexpected error: " + std::string(e.what()));
 
         json error;
         error["type"] = "error";
@@ -57,8 +54,7 @@ std::string GameController::routeMessage(const std::string& content,
 void GameController::routeDisconnect(const std::string& session_id) {
     // Detect if one of the players disconnected and if so reset the game
 
-    auto& logger = Logger::instance();
-    logger.debug("Handling disconnect for session: " + session_id);
+    logger_.debug("Handling disconnect for session: " + session_id);
 
     std::string disconnected_color;
 
@@ -81,18 +77,18 @@ void GameController::routeDisconnect(const std::string& session_id) {
             hadPlayerJoined = true;
         }
 
-        logger.info(disconnected_color + " player disconnected");
+        logger_.info(disconnected_color + " player disconnected");
 
         if (hadPlayerJoined) {
-            logger.info("Resetting game");
+            logger_.info("Resetting game");
             game_context_->resetGame("");
         }
     }
 
     if (hadPlayerJoined) {
         if (!disconnected_color.empty()) {
-            logger.debug("Notifying other players that game reset");
-    
+            logger_.debug("Notifying other players that game reset");
+
             // Broadcast reset to other players
             json reset_broadcast = {{"type", "game_reset"},
                                     {"reason", "all_players_disconnected"},
@@ -103,24 +99,20 @@ void GameController::routeDisconnect(const std::string& session_id) {
 }
 
 std::string GameController::handleMessage(const std::string& session_id, const json& msg) {
-    auto& logger = Logger::instance();
-    logger.debug("Routing message for session: " + session_id);
-
-    // File upload chunks
-    if (msg.contains("type") && msg["type"] == "file_upload") {
-        return handleFileUploadChunk(msg, session_id);
-    }
+    logger_.debug("Routing message for session: " + session_id);
 
     // Command-based routing
     if (msg.contains("command")) {
         std::string command = msg["command"];
 
-        if (command == "join_game") {
-            return handleJoinGame(session_id, msg["color"]);
+        if (command == "upload_game") {
+            return handleFileUploadChunk(msg, session_id);
+        } else if (command == "join_game") {
+            return handleJoinGame(session_id, msg["single_player"], msg["color"]);
         } else if (command == "start_game") {
             return handleStartGame(session_id);
         } else if (command == "make_move") {
-            return handleMakeMove(session_id, msg["from"], msg["to"]);
+            return handleMoveToParse(session_id, msg["move"]);
         } else if (command == "end_game") {
             return handleEndGame(session_id);
         } else if (command == "display_board") {
@@ -128,22 +120,22 @@ std::string GameController::handleMessage(const std::string& session_id, const j
         }
     }
 
-    logger.warning("Unknown message type");
+    logger_.warning("Unknown message type");
     json error;
     error["error"] = "Unknown command";
     return error.dump();
 }
 
-std::string GameController::handleJoinGame(const std::string& session_id,
+std::string GameController::handleJoinGame(const std::string& session_id, bool single_player,
                                            const std::string& color) {
-    auto& logger = Logger::instance();
-    logger.info("Session " + session_id + " joining as " + color);
+    logger_.info("Session " + session_id + " joining as " + color);
 
     json response;
 
-    // Thread-safe instruction block
-    {
-        // Lock the game context
+    if (single_player) {
+        std::lock_guard<std::mutex> lock(game_context_->getMutex());
+        response = game_context_->handleJoinRequestAsSinglePlayer(session_id);
+    } else {
         std::lock_guard<std::mutex> lock(game_context_->getMutex());
         response = game_context_->handleJoinRequest(session_id, color);
     }
@@ -152,8 +144,7 @@ std::string GameController::handleJoinGame(const std::string& session_id,
 }
 
 std::string GameController::handleStartGame(const std::string& session_id) {
-    auto& logger = Logger::instance();
-    logger.info("Session " + session_id + " starting game");
+    logger_.info("Session " + session_id + " starting game");
 
     json response;
 
@@ -166,10 +157,24 @@ std::string GameController::handleStartGame(const std::string& session_id) {
     return response.dump();
 }
 
-std::string GameController::handleMakeMove(const std::string& session_id, const std::string& from,
-                                           const std::string& to) {
-    auto& logger = Logger::instance();
-    logger.info("Session " + session_id + " move: " + from + "-" + to);
+std::string GameController::handleMoveToParse(const std::string& session_id,
+                                              const std::string& move) {
+    logger_.debug("Session " + session_id + " move to parse: " + move);
+
+    MoveParser parser;
+    auto parsedMove = parser.parse(move);
+    if (parsedMove.has_value()) {
+        return handleParsedMove(session_id, parsedMove->from, parsedMove->to);
+    } else {
+        json error;
+        error["error"] = "Couldn't parse move";
+        return error.dump();
+    }
+}
+
+std::string GameController::handleParsedMove(const std::string& session_id, const std::string& from,
+                                             const std::string& to) {
+    logger_.info("Session " + session_id + " move: " + from + "-" + to);
 
     json response;
 
@@ -183,8 +188,7 @@ std::string GameController::handleMakeMove(const std::string& session_id, const 
 }
 
 std::string GameController::handleEndGame(const std::string& session_id) {
-    auto& logger = Logger::instance();
-    logger.info("Session " + session_id + " ending game");
+    logger_.info("Session " + session_id + " ending game");
 
     json response;
 
@@ -198,8 +202,7 @@ std::string GameController::handleEndGame(const std::string& session_id) {
 }
 
 std::string GameController::handleDisplayBoard() {
-    auto& logger = Logger::instance();
-    logger.debug("Displaying board");
+    logger_.debug("Displaying board");
 
     json response;
 
@@ -216,8 +219,6 @@ std::string GameController::handleDisplayBoard() {
 // class in the Utils part of the backend source code.
 std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
                                                   const std::string& session_id) {
-    auto& logger = Logger::instance();
-
     try {
         auto metadata = msg["metadata"];
         std::string filename = metadata["filename"];
@@ -237,16 +238,18 @@ std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
             upload.accumulated_data.clear();
             upload.accumulated_data.reserve(total_size);
 
-            logger.info("Starting file upload: " + filename + " (" + std::to_string(total_size) +
-                        " bytes) for session " + session_id);
+            logger_.info("Starting file upload: " + filename + " (" + std::to_string(total_size) +
+                         " bytes) for session " + session_id);
         }
 
         upload.accumulated_data += chunk_data;
+
+        // TCP or Unix stream socket IPC guarantee packet order
         upload.chunks_received = chunk_current;
 
         int percent = (chunk_current * 100) / chunks_total;
-        logger.info("Upload progress " + filename + ": " + std::to_string(percent) + "% (" +
-                    std::to_string(chunk_current) + "/" + std::to_string(chunks_total) + ")");
+        logger_.info("Upload progress " + filename + ": " + std::to_string(percent) + "% (" +
+                     std::to_string(chunk_current) + "/" + std::to_string(chunks_total) + ")");
 
         json ack;
         ack["type"] = "upload_progress";
@@ -256,20 +259,21 @@ std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
         ack["percent"] = percent;
 
         if (chunk_current >= chunks_total) {
-            logger.info("File upload complete: " + filename);
+            logger_.info("File upload complete: " + filename);
 
             MoveParser parser;
             auto moves = parser.parseGame(upload.accumulated_data);
 
+            // TODO: possibly run the parsed moves in a separate function
             json responses = json::array();
             for (size_t i = 0; i < moves.size(); ++i) {
                 const auto& move = moves[i];
-                std::string move_response = handleMakeMove(session_id, move.from, move.to);
+                std::string move_response = handleParsedMove(session_id, move.from, move.to);
                 json move_json = json::parse(move_response);
                 responses.push_back(move_json);
 
                 if (move_json.contains("type") && move_json["type"] == "error") {
-                    logger.warning("Error at move " + std::to_string(i + 1));
+                    logger_.warning("Error at move " + std::to_string(i + 1));
                     break;
                 }
             }
@@ -287,7 +291,7 @@ std::string GameController::handleFileUploadChunk(const nlohmann::json& msg,
         return ack.dump();
 
     } catch (const json::exception& e) {
-        logger.error("Error processing file upload: " + std::string(e.what()));
+        logger_.error("Error processing file upload: " + std::string(e.what()));
 
         json error;
         error["type"] = "error";

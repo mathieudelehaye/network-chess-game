@@ -21,7 +21,7 @@ class ClientSession:
         """
         self.transport = transport
         self.router = router
-        self._logger = Logger()
+        self.logger_ = Logger()
         self._active = False
 
         # Message buffering
@@ -40,7 +40,7 @@ class ClientSession:
         # Start transport with our receive callback
         self.transport.start(self._on_receive)
 
-        self._logger.debug("Client session started")
+        self.logger_.debug("Client session started")
 
     def _on_receive(self, raw: str) -> None:
         """
@@ -85,17 +85,16 @@ class ClientSession:
         @return True if sent successfully
         """
         if not self._active:
-            self._logger.warning("Cannot send - session not active")
+            self.logger_.warning("Cannot send - session not active")
             return False
 
         try:
-            # import pdb; pdb.set_trace()
             json_str = json.dumps(message) + "\n"
             self.transport.send(json_str)
-            self._logger.debug(f"Sent: {json_str.strip()}")
+            self.logger_.debug(f"Sent: {json_str.strip()}")
             return True
         except Exception as e:
-            self._logger.error(f"Failed to send message: {e}")
+            self.logger_.error(f"Failed to send message: {e}")
             return False
 
     def close(self) -> None:
@@ -111,4 +110,4 @@ class ClientSession:
         # Close transport (stops reader thread)
         self.transport.close()
 
-        self._logger.debug("Client session closed")
+        self.logger_.debug("Client session closed")

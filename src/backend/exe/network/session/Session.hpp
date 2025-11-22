@@ -19,10 +19,9 @@ using CloseCallback = std::function<void(const std::string& session_id)>;
  * using GameController.
  */
 class Session : public std::enable_shared_from_this<Session> {
-public:
-    explicit Session(
-        std::unique_ptr<ITransport> transport,
-        std::shared_ptr<GameController> controller);
+   public:
+    explicit Session(std::unique_ptr<ITransport> transport,
+                     std::shared_ptr<GameController> controller);
     ~Session();
 
     void start();                                             ///< Start receiving messages
@@ -33,7 +32,7 @@ public:
 
     void setCloseCallback(CloseCallback callback);
 
-private:
+   private:
     void onReceive(
         const std::string& raw);  ///< Accumulate payloads until having received a complete message
     void handleMessage(const std::string& message);  ///< Route complete message

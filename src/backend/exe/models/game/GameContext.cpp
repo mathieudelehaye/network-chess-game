@@ -3,10 +3,9 @@
 #include "GameState.hpp"
 #include "Logger.hpp"
 
-GameContext::GameContext():           
-    current_state_(std::make_unique<WaitingForPlayersState>()),
-    chess_game_(std::make_unique<ChessGame>()) {
-
+GameContext::GameContext()
+    : current_state_(std::make_unique<WaitingForPlayersState>()),
+      chess_game_(std::make_unique<ChessGame>()) {
     auto& logger = Logger::instance();
     logger.info("GameContext initialised");
 }
@@ -74,6 +73,10 @@ json GameContext::handleJoinRequest(const std::string& player_id, const std::str
     return current_state_->handleJoinRequest(this, player_id, color);
 }
 
+json GameContext::handleJoinRequestAsSinglePlayer(const std::string& player_id) {
+    return current_state_->handleJoinRequestAsSinglePlayer(this, player_id);
+}
+
 json GameContext::handleStartRequest(const std::string& player_id) {
     return current_state_->handleStartRequest(this, player_id);
 }
@@ -105,7 +108,7 @@ std::string GameContext::getStatusMessage() const {
     }
 
     if (state_name == "ReadyToStart") {
-        return "Both players joined. Wait for start command to be sent by a player";
+        return "Ready to start. Wait for start command to be sent";
     }
 
     if (state_name == "InProgress") {

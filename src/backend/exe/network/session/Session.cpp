@@ -6,12 +6,10 @@
 #include "GameController.hpp"
 #include "Logger.hpp"
 
-Session::Session(
-    std::unique_ptr<ITransport> transport, std::shared_ptr<GameController> controller)
+Session::Session(std::unique_ptr<ITransport> transport, std::shared_ptr<GameController> controller)
     : transport(std::move(transport)),
       controller(std::move(controller)),
       session_id_(generateSessionId()) {
-
     auto& logger = Logger::instance();
     logger.info("Session created: " + session_id_);
 }
@@ -94,7 +92,7 @@ void Session::close() {
     if (transport) {
         transport->close();
     }
-    
+
     // Notify server about session closure
     if (on_close_callback) {
         on_close_callback(session_id_);

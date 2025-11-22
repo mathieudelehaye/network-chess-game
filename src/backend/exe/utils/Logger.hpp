@@ -13,7 +13,7 @@
  * Logs to both console and file.
  */
 class Logger {
-   public:
+public:
     /**
      * @brief Get the logger instance.
      * @return Reference to the logger instance
@@ -56,11 +56,15 @@ class Logger {
      */
     void critical(const std::string& message);
 
+    bool isLevelInfo() { return (logger_->level() == spdlog::level::level_enum::info); }
+    bool isLevelDebug() { return (logger_->level() == spdlog::level::level_enum::debug); }
+    bool isLevelTrace() { return (logger_->level() == spdlog::level::level_enum::trace); }
+
     // Delete copy constructor and assignment operator (Singleton)
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
 
-   private:
+private:
     /**
      * @brief Private constructor (Singleton)
      */

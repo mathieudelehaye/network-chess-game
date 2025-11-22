@@ -8,6 +8,9 @@ class WaitingForPlayersState : public IGameState {
     json handleJoinRequest(GameContext* context, const std::string& player_id,
                            const std::string& color) override;
 
+    json handleJoinRequestAsSinglePlayer(GameContext* context,
+                                         const std::string& player_id) override;
+
     // Parameter name hidden to avoid unused parameter warnings
     json handleStartRequest(GameContext* /*context*/, const std::string& /*player_id*/) override {
         return buildError("Cannot start: waiting for players");
@@ -45,6 +48,11 @@ class ReadyToStartState : public IGameState {
         return buildError("Both players already joined");
     }
 
+    json handleJoinRequestAsSinglePlayer(GameContext* /*context*/,
+                                         const std::string& /*player_id*/) override {
+        return buildError("Game already in progress");
+    }
+
     json handleStartRequest(GameContext* context, const std::string& player_id) override;
 
     json handleMoveRequest(GameContext* /*context*/, const std::string& /*player_id*/,
@@ -77,6 +85,11 @@ class InProgressState : public IGameState {
         return buildError("Game already in progress");
     }
 
+    json handleJoinRequestAsSinglePlayer(GameContext* /*context*/,
+                                         const std::string& /*player_id*/) override {
+        return buildError("Game already in progress");
+    }
+
     json handleStartRequest(GameContext* /*context*/, const std::string& /*player_id*/) override {
         return buildError("Game already started");
     }
@@ -105,6 +118,11 @@ class GameOverState : public IGameState {
     json handleJoinRequest(GameContext* /*context*/, const std::string& /*player_id*/,
                            const std::string& /*color*/) override {
         return buildError("Game is over. Start a new game");
+    }
+
+    json handleJoinRequestAsSinglePlayer(GameContext* /*context*/,
+                                         const std::string& /*player_id*/) override {
+        return buildError("Game already in progress");
     }
 
     json handleStartRequest(GameContext* /*context*/, const std::string& /*player_id*/) override {

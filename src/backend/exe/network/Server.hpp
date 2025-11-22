@@ -13,17 +13,17 @@
 #include "TransportFactory.hpp"
 
 class Server {
-public:
+   public:
     Server(NetworkMode mode, const std::string& ip, int port);
 
     void start();
     void stop();
 
-private:
+   private:
     void acceptLoop(std::stop_token st);
-    void cleanupLoop(std::stop_token st); 
+    void cleanupLoop(std::stop_token st);
     void handleSessionClosed(const std::string& session_id);
-    void cleanupClosedSessions();  
+    void cleanupClosedSessions();
 
     void connectTCP(const std::string& ip, int port);
     void connectIPC();
@@ -35,7 +35,7 @@ private:
     int server_fd = -1;
     NetworkMode network;
     std::atomic<bool> running{false};
-    
+
     std::jthread acceptThread;
     std::jthread cleanupThread;
 

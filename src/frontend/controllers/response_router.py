@@ -21,7 +21,7 @@ class ResponseRouter:
             game_controller: Optional reference to GameController for menu refresh
         """
 
-        self._logger = Logger()
+        self.logger_ = Logger()
         self.context = ClientContext()  # gets the singleton instance
         self.model = GameModel()        # gets the singleton instance
         self.view = ConsoleView()
@@ -33,12 +33,12 @@ class ResponseRouter:
         try:            
             response = json.loads(message)
         except json.JSONDecodeError as e:
-            self._logger.error(f"Invalid JSON from server: {e}")
-            self._logger.debug(f"Raw data: {message}")
+            self.logger_.error(f"Invalid JSON from server: {e}")
+            self.logger_.debug(f"Raw data: {message}")
             return
 
         msg_type = response.get("type", "unknown")
-        self._logger.debug(f"Routing message type: {msg_type}")
+        self.logger_.debug(f"Routing message type: {msg_type}")
         
         # Route to handler
         handlers = {
@@ -58,7 +58,7 @@ class ResponseRouter:
         if handler:
             handler(response)
         else:
-            self._logger.warning(f"Unknown message type: {msg_type}")
+            self.logger_.warning(f"Unknown message type: {msg_type}")
     
     # Message handlers
     def _handle_session_created(self, response: dict):
@@ -70,12 +70,22 @@ class ResponseRouter:
     def _handle_join_success(self, response: dict):
         """Handle successful join"""
         color = response.get("color")
+        single_player = response.get("single_player")
         status = response.get("status", "")
+        session_id = response.get("session_id")
         
-        self.context.on_joined(color)
-        self.model.set_player_joined(color)
+        self.context.on_joined(session_id, single_player, color)
+
+        if not single_player:
+            self.model.set_player_joined(color)
+            self.view.display_success(f"Joined as {color}")
+        else:
+            # Player 1 play both colors  
+            self.model.set_player_joined("white")
+            self.model.set_player_joined("black")
+            self.model.start_game()
+            self.view.display_success(f"Joined as white and black")
         
-        self.view.display_success(f"Joined as {color}")
         if status:
             self.view.display_info(status)
         
@@ -86,12 +96,11 @@ class ResponseRouter:
         
         self.model.set_player_joined(color)
         
-        self.view.display_info(f"\n>>> Player joined as {color} <<<")
+        self.view.display_info(f"\n>>> Another player joined as {color} <<<")
         if status:
             self.view.display_info(f">>> {status} <<<")
         
         if self.model.both_players_joined:
-            self.context.on_joined()
             self.view.display_info(">>> Both players ready! Press Enter to refresh <<<")
         
         self._refresh_menu()
@@ -117,7 +126,8 @@ class ResponseRouter:
         self.context.on_game_started()
         self.model.start_game()
         
-        self.view.display_success("Game started!")
+        message = "1-player game started!" if self.context.player_number == 1 else "2-player game started!"
+        self.view.display_success(message)
         
         self._refresh_menu()
         

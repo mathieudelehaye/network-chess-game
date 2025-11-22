@@ -11,7 +11,7 @@
  *
  * This class is a thin wrapper for the `chess.hpp` library
  * (https://github.com/Disservin/chess-library) which manages some internal
- * chess board states.  
+ * chess board states.
  */
 class ChessGame {
    public:

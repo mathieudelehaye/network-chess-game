@@ -4,9 +4,9 @@ Handles game data and data transformation logic.
 State management is handled by ClientContext.
 """
 
+import re
 from typing import Optional
 from utils.logger import Logger
-
 
 class GameModel:
     """

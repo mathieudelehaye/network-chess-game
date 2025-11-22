@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "GameContext.hpp"
+#include "Logger.hpp"
 
 struct FileUploadState {
     std::string filename;
@@ -23,7 +24,7 @@ struct FileUploadState {
  */
 
 class GameController {
-public:
+   public:
     GameController();
     ~GameController() = default;
 
@@ -40,16 +41,18 @@ public:
 
     void setBroadcastCallback(BroadcastCallback callback);
 
-private:
+   private:
     std::string handleMessage(const std::string& session_id, const json& msg);
 
     /**
      * @brief Handle join_game command
      * @param session_id Client session ID
-     * @param color "white" or "black"
+     * @param single_player True if single player mode
+     * @param color The joining player color ("white" or "black")
      * @return JSON response
      */
-    std::string handleJoinGame(const std::string& session_id, const std::string& color);
+    std::string handleJoinGame(const std::string& session_id, bool single_player,
+                               const std::string& color);
 
     /**
      * @brief Handle start_game command
@@ -61,12 +64,20 @@ private:
     /**
      * @brief Handle make_move command
      * @param session_id Client session ID
+     * @param move Move to parse
+     * @return JSON response
+     */
+    std::string handleMoveToParse(const std::string& session_id, const std::string& move);
+
+    /**
+     * @brief Handle parsed move
+     * @param session_id Client session ID
      * @param from Starting square (e.g., "e2")
      * @param to Target square (e.g., "e4")
      * @return JSON response
      */
-    std::string handleMakeMove(const std::string& session_id, const std::string& from,
-                               const std::string& to);
+    std::string handleParsedMove(const std::string& session_id, const std::string& from,
+                                 const std::string& to);
 
     /**
      * @brief Handle end_game command
@@ -94,4 +105,6 @@ private:
 
     // Track file uploads per session
     std::unordered_map<std::string, FileUploadState> file_uploads_;
+
+    Logger& logger_;
 };

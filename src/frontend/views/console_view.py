@@ -4,7 +4,6 @@ View layer for displaying game information to the user.
 
 from utils.logger import Logger
 
-
 class ConsoleView:
     """
     Handles all user-facing output.
@@ -12,7 +11,7 @@ class ConsoleView:
     """
 
     def __init__(self):
-        self._logger = Logger()
+        self.logger_ = Logger()
 
     def display_menu(self, info: dict):
         """Display main menu based on game state"""
@@ -20,15 +19,14 @@ class ConsoleView:
         print("CHESS GAME CLIENT")
         print("="*60)
         
-        # Extract info
         state_name = info.get('state_name', 'Unknown')
         player_color = info.get('player_color')
         current_turn = info.get('current_turn')
         white_joined = info.get('white_joined', False)
         black_joined = info.get('black_joined', False)
         move_count = info.get('move_count', 0)
+        player_number = info.get('player_number', 1)
         
-        # Show current status
         print(f"\nStatus: {state_name}")
         
         # Show players
@@ -82,10 +80,13 @@ class ConsoleView:
             
         # STATE: PLAYING - Game in progress
         elif state_name == "PLAYING":
-            print("1. Make Move")
-            print("2. Display Board")
-            print("3. End Game")
-            print("Q. Quit")
+            print("Waiting for the next strike.")
+            print()
+            print("Special commands:")
+            if player_number == 1:
+                print("  :f <file name> => upload game file")
+            print("  :d             => display board")
+            print("  :q             => quit")
             
         # STATE: GAME_OVER
         elif state_name == "GAME_OVER":
@@ -93,19 +94,44 @@ class ConsoleView:
             print("Q. Quit")
         
         print("="*60)
+
+    def wait_for_input(self, info: dict) -> tuple[str, ...]:
+        """Display prompt and wait for user input based on game state"""
+        
+        state_name = info.get('state_name', 'Unknown')
+        player_number = info.get('player_number', 1)
+        
+        if state_name == "PLAYING":
+            return self.get_game_input(player_number == 1)
+        else:
+            return (self.get_user_choice())
+    
+    def get_game_input(self, single_player: bool) -> tuple[str, ...]:
+        """Get move from user (e.g., 'e2-e4'). Special commands
+        are also allowed, including:
+          - `:f <file name>`    => upload game file (only in single player mode)
+          - `:d`                => display board
+          - `:q`                => quit the game
+        """
+        command = input("Enter move (or special command): ").strip()
+        if command[0] == ':':
+            # special command
+            if single_player and command[1] == 'f':
+                pos = command.find(' ')
+                return ('f', command[pos:].strip())
+            if command[1] == 'd':
+                return ('d')
+            if command[1] == 'q':
+                return ('q')
+        if '-' in command:
+            # game move
+            # send the whole move, since the server will parse it
+            return ('m', command)
+        return None, None
     
     def get_user_choice(self) -> str:
         """Get user menu choice"""
         return input("\nEnter choice: ").strip()
-    
-    def get_move_input(self) -> tuple:
-        """Get move from user (e.g., 'e2-e4')"""
-        move = input("Enter move (e.g., e2-e4): ").strip()
-        if '-' in move:
-            parts = move.split('-')
-            if len(parts) == 2:
-                return parts[0].strip(), parts[1].strip()
-        return None, None
     
     def display_board(self, board: str) -> None:
         """Display chess board"""
@@ -120,27 +146,27 @@ class ConsoleView:
         print("\n" + "="*60)
         print(f"GAME OVER: {result.upper()}")
         print("="*60 + "\n")
-        self._logger.info(f"Game Over: {result}")
+        self.logger_.info(f"Game Over: {result}")
     
     def display_success(self, message: str) -> None:
         """Display success message"""
-        self._logger.info(message)
+        self.logger_.info(message)
     
     def display_error(self, error: str) -> None:
         """Display error message"""
-        self._logger.error(error)
+        self.logger_.error(error)
     
     def display_info(self, message: str) -> None:
         """Display informational message"""
-        self._logger.info(message)
+        self.logger_.info(message)
     
     def display_warning(self, message: str) -> None:
         """Display warning message"""
-        self._logger.warning(message)
+        self.logger_.warning(message)
     
     def display_connected(self, session_id: str) -> None:
         """Display connection success"""
-        self._logger.info(f"Connected with session: {session_id}")
+        self.logger_.info(f"Connected with session: {session_id}")
     
     def confirm_action(self, message: str) -> bool:
         """Ask user to confirm an action"""

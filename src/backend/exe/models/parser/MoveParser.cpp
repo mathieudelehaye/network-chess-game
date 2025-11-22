@@ -62,10 +62,6 @@ std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
     }
 }
 
-bool MoveParser::isValid(const std::string& move) {
-    return parse(move).has_value();
-}
-
 std::vector<ParsedMove> MoveParser::parseGame(const std::string& game_content) {
     auto& logger = Logger::instance();
     std::vector<ParsedMove> moves;

@@ -30,13 +30,6 @@ class MoveParser {
     std::optional<ParsedMove> parse(const std::string& move);
 
     /**
-     * @brief Check if move is syntactically valid (without extracting)
-     * @param move The move string
-     * @return true if valid syntax
-     */
-    bool isValid(const std::string& move);
-
-    /**
      * @brief Parse entire game file (for file upload mode)
      * @param move The file content
      * @return The parsed moves

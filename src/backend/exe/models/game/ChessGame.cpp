@@ -1,6 +1,7 @@
 #include "ChessGame.hpp"
 
 #include <sstream>
+
 #include "Logger.hpp"
 
 ChessGame::ChessGame() : moveNumber_(1) {
@@ -13,12 +14,16 @@ std::optional<StrikeData> ChessGame::applyMove(const std::string& from, const st
         return std::nullopt;
     }
 
+    if (move->typeOf() == chess::Move::CASTLING) {
+        auto& logger = Logger::instance();
+        logger.debug("Castling move detected");
+    }
+
     StrikeData data;
 
     fillStrikeDataBeforeMove(data, to);
-
     board_.makeMove(*move);
-
+    moveNumber_++;  // Need to manually increment move number
     fillStrikeDataAfterMove(data, *move);
 
     return data;
@@ -74,6 +79,21 @@ std::optional<chess::Move> ChessGame::findMove(const std::string& from,
     chess::Square from_sq(from);
     chess::Square to_sq(to);
 
+    auto& logger = Logger::instance();
+    
+    if (logger.isLevelTrace()) {
+        std::ostringstream traceStream; 
+
+        for (const auto& move : moves) {
+            traceStream << "Move from: " << move.from() 
+                        << ", to: " << move.to() 
+                        << ", isCastling: " << (move.typeOf() == chess::Move::CASTLING) 
+                        << "\n";
+        }
+
+        logger.trace(traceStream.str());
+    }
+
     for (const auto& move : moves) {
         if (move.from() == from_sq && move.to() == to_sq) {
             return move;
@@ -84,17 +104,14 @@ std::optional<chess::Move> ChessGame::findMove(const std::string& from,
 }
 
 // TODO: consider returning a variable copy rather than passing the variable by
-// reference 
-void ChessGame::fillStrikeDataBeforeMove(
-    StrikeData& data,
-    const std::string& to
-) const {
+// reference
+void ChessGame::fillStrikeDataBeforeMove(StrikeData& data, const std::string& to) const {
     // Check what's on the destination square
     auto destination = chess::Square(to);
     auto captured = board_.at(destination);
 
     data.is_capture = (captured != chess::Piece::NONE);
-    
+
     if (data.is_capture) {
         data.captured_color = (moveNumber_ % 2 == 1) ? "black" : "white";
         data.captured_piece = getPieceName(captured.type());
@@ -105,22 +122,19 @@ void ChessGame::fillStrikeDataBeforeMove(
 }
 
 // TODO: consider returning a variable copy rather than passing the variable by
-// reference 
-void ChessGame::fillStrikeDataAfterMove(
-    StrikeData& data,
-    const chess::Move& move
-) const {
+// reference
+void ChessGame::fillStrikeDataAfterMove(StrikeData& data, const chess::Move& move) const {
     data.case_src = std::string(move.from());
     data.case_dest = std::string(move.to());
     data.piece = getPieceName(board_.at(move.to()).type());
-    
+
     data.is_check = inCheck();
     data.is_checkmate = isCheckmate();
     data.is_stalemate = isStalemate();
-    
+
     if (move.typeOf() == chess::Move::CASTLING) {
         data.is_castling = true;
-        
+
         // Determine castling type based on the destination square
         // King-side castling: king moves to g-file
         // Queen-side castling: king moves to c-file

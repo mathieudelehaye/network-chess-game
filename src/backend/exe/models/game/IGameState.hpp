@@ -17,6 +17,8 @@ class IGameState {
     // State-specific behavior
     virtual json handleJoinRequest(GameContext* context, const std::string& player_id,
                                    const std::string& color) = 0;
+    virtual json handleJoinRequestAsSinglePlayer(GameContext* context,
+                                                 const std::string& player_id) = 0;
     virtual json handleStartRequest(GameContext* context, const std::string& player_id) = 0;
     virtual json handleMoveRequest(GameContext* context, const std::string& player_id,
                                    const std::string& from, const std::string& to) = 0;

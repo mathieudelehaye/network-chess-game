@@ -8,10 +8,8 @@
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
 
-using BroadcastCallback = std::function<void(
-    const std::string& originating_session_id,
-    const json& message, 
-    bool to_all)>;
+using BroadcastCallback = std::function<void(const std::string& originating_session_id,
+                                             const json& message, bool to_all)>;
 
 /**
  * @brief Manages game session state and transitions
@@ -19,7 +17,7 @@ using BroadcastCallback = std::function<void(
  * Owns the ChessGame instance and coordinates state transitions
  */
 class GameContext {
-public:
+   public:
     GameContext();
     ~GameContext() = default;
 
@@ -54,13 +52,14 @@ public:
 
     // Request handlers (delegate to current state)
     nlohmann::json handleJoinRequest(const std::string& player_id, const std::string& color);
+    nlohmann::json handleJoinRequestAsSinglePlayer(const std::string& player_id);
     nlohmann::json handleStartRequest(const std::string& player_id);
     nlohmann::json handleMoveRequest(const std::string& player_id, const std::string& from,
                                      const std::string& to);
     nlohmann::json handleEndRequest(const std::string& player_id);
     nlohmann::json handleDisplayBoard();
 
-private:
+   private:
     std::unique_ptr<IGameState> current_state_;
     std::unique_ptr<ChessGame> chess_game_;
     BroadcastCallback broadcast_callback_;

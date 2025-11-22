@@ -30,6 +30,8 @@ class ClientContext:
     def __init__(self):
         self._state = ClientState.DISCONNECTED
         self._player_color: Optional[str] = None
+        self._player_number = 0
+        self._session_id: Optional[str] = None
         self._session_id: Optional[str] = None
         
     @property
@@ -39,6 +41,10 @@ class ClientContext:
     @property
     def player_color(self) -> Optional[str]:
         return self._player_color
+    
+    @property
+    def player_number(self) -> Optional[int]:
+        return self._player_number
         
     @property
     def session_id(self) -> Optional[str]:
@@ -51,12 +57,23 @@ class ClientContext:
             self._state = ClientState.CONNECTED
             self._session_id = session_id
             
-    def on_joined(self, color: str):
-        """Transition: CONNECTED → JOINED"""
-        if self._state == ClientState.CONNECTED:
-            self._state = ClientState.JOINED
+    def on_joined(self, session_id: str, single_player: bool, color: str):
+        """Transition: CONNECTED → JOINED or CONNECTED → PLAYING (single-player mode)"""
+        if not (self._state == ClientState.CONNECTED and self._session_id == session_id):
+            return
+        
+        if not single_player:
+            # Detect that player joined the server for a 2 player game 
+            self._state = ClientState.JOINED # Start game command needs to be sent
             self._player_color = color
-            
+            self._player_number = 2
+        else:
+            # Detect that player joined the server as single player (i.e.
+            # playing both White and Black) 
+            self._state = ClientState.PLAYING # No start game command required
+            self._player_color = ""
+            self._player_number = 1
+
     def on_game_started(self):
         """Transition: JOINED → PLAYING"""
         if self._state == ClientState.JOINED:

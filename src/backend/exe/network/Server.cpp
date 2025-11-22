@@ -12,12 +12,8 @@
 
 using json = nlohmann::json;
 
-Server::Server(
-    NetworkMode mode, 
-    const std::string& ip, 
-    int port)
-    : network(mode),
-    shared_controller_(std::make_shared<GameController>()) {
+Server::Server(NetworkMode mode, const std::string& ip, int port)
+    : network(mode), shared_controller_(std::make_shared<GameController>()) {
     // Create socket based on transport mode
     switch (network) {
         case NetworkMode::IPC:
@@ -38,7 +34,7 @@ void Server::setupBroadcastCallback() {
         [this](const std::string& originating_session_id, const json& msg, bool to_all) {
             auto& logger = Logger::instance();
             logger.debug("Server::setupBroadcastCallback");
-            
+
             std::string message = msg.dump();
             logger.debug("Server::setupBroadcastCallback: message = " + message);
 
@@ -47,21 +43,17 @@ void Server::setupBroadcastCallback() {
             } else {
                 this->broadcastToOthers(originating_session_id, message);
             }
-    });
+        });
 }
 
 void Server::start() {
     running = true;
 
     // Start accept thread
-    acceptThread = std::jthread([this](std::stop_token st) {
-        acceptLoop(st);
-    });
+    acceptThread = std::jthread([this](std::stop_token st) { acceptLoop(st); });
 
     // Start cleanup thread
-    cleanupThread = std::jthread([this](std::stop_token st) {
-        cleanupLoop(st);
-    });
+    cleanupThread = std::jthread([this](std::stop_token st) { cleanupLoop(st); });
 }
 
 void Server::stop() {
@@ -106,9 +98,8 @@ void Server::acceptLoop(std::stop_token st) {
         auto session = std::make_shared<Session>(std::move(transport), shared_controller_);
 
         // Set close callback
-        session->setCloseCallback([this](const std::string& session_id) {
-            this->handleSessionClosed(session_id);
-        });
+        session->setCloseCallback(
+            [this](const std::string& session_id) { this->handleSessionClosed(session_id); });
 
         {
             // Add the session to the list of active sessions (thread-safe)
@@ -201,7 +192,7 @@ void Server::handleSessionClosed(const std::string& session_id) {
         std::lock_guard<std::mutex> lock(cleanup_mutex_);
         sessions_to_cleanup_.push_back(session_id);
     }
-    
+
     // Notify game controller immediately
     shared_controller_->routeDisconnect(session_id);
 }
@@ -224,7 +215,7 @@ void Server::cleanupLoop(std::stop_token st) {
 
 void Server::cleanupClosedSessions() {
     auto& logger = Logger::instance();
-    
+
     // Get sessions to cleanup
     std::vector<std::string> to_cleanup;
     {
@@ -235,17 +226,17 @@ void Server::cleanupClosedSessions() {
         to_cleanup = std::move(sessions_to_cleanup_);
         sessions_to_cleanup_.clear();
     }
-    
+
     logger.debug("Cleaning up " + std::to_string(to_cleanup.size()) + " sessions");
-    
+
     // Remove sessions from the main list
     std::lock_guard<std::mutex> lock(sessions_mutex_);
     for (const auto& session_id : to_cleanup) {
         auto it = std::find_if(sessions.begin(), sessions.end(),
-            [&session_id](const std::shared_ptr<Session>& s) {
-                return s->getSessionId() == session_id;
-            });
-        
+                               [&session_id](const std::shared_ptr<Session>& s) {
+                                   return s->getSessionId() == session_id;
+                               });
+
         if (it != sessions.end()) {
             logger.debug("Removing session from list: " + session_id);
             sessions.erase(it);

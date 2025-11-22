@@ -1,5 +1,7 @@
 """Game controller - handles user interaction and commands"""
 
+import os
+import time
 from pathlib import Path
 from utils.logger import Logger
 from models.client_context import ClientContext, ClientState
@@ -12,7 +14,7 @@ class GameController:
     Game controller - handles user interaction.
     """
     
-    def __init__(self, session=None):
+    def __init__(self):
         """
         Initialise game controller.
         
@@ -20,8 +22,8 @@ class GameController:
             session: ClientSession instance for sending messages
         """
 
-        self._logger = Logger()
-        self.session = session
+        self.logger_ = Logger()
+        self._last_displayed_info = None
         self.context = ClientContext()  # gets the singleton instance
         self.model = GameModel()        # gets the singleton instance
         self.view = ConsoleView()
@@ -31,22 +33,30 @@ class GameController:
         self.session = session
     
     def show_menu(self):
-        """Display state-aware menu"""
-        state = self.context.state
+        """Display adaptable menu"""
         
-        # Build menu info from model/context
-        menu_info = {
+        current_info = {
             "state_name": self.context.get_state_name(),
-            "player_color": self.context.player_color,
-            "session_id": self.context.session_id,
-            "move_count": self.model.move_count,
-            "current_turn": self.model.current_turn,
             "white_joined": self.model.white_joined,
             "black_joined": self.model.black_joined,
+            "current_turn": self.model.current_turn,
+            "move_count": self.model.move_count,
+            "player_color": self.context.player_color,
+            "session_id": self.context.session_id,
+            "player_number": self.context.player_number,
         }
         
-        # Display menu using view
-        self.view.display_menu(menu_info)
+        self.view.display_menu(current_info)
+
+    def wait_for_input(self) -> tuple[str, ...]:
+        """Display adaptable input prompt"""
+
+        menu_info = {
+            "state_name": self.context.get_state_name(),
+            "player_number": self.context.player_number,
+        }
+
+        return self.view.wait_for_input(menu_info)
         
     def send_join(self, color: str):
         """Send join game command"""
@@ -56,9 +66,23 @@ class GameController:
             
         self.session.send({
             "command": "join_game",
+            "single_player": False,
             "color": color
         })
-        self._logger.info(f"Sent join command: {color}")
+        self.logger_.info(f"Sent join command: {color}")
+        
+    def send_join_single_player(self):
+        """Send join game command for single player mode"""
+        if not self.context.can_join():
+            self.view.display_error("Cannot join in current state")
+            return
+            
+        self.session.send({
+            "command": "join_game",
+            "single_player": True,
+            "color": ""
+        })
+        self.logger_.info(f"Sent join command for single player")
         
     def send_start(self):
         """Send start game command"""
@@ -73,9 +97,9 @@ class GameController:
         self.session.send({
             "command": "start_game"
         })
-        self._logger.info("Sent start game command")
+        self.logger_.info("Sent start game command")
         
-    def send_move(self, from_sq: str, to_sq: str):
+    def send_move(self, move: str):
         """Send move command"""
         if not self.context.can_move():
             self.view.display_error("Cannot move in current state")
@@ -83,10 +107,9 @@ class GameController:
             
         self.session.send({
             "command": "make_move",
-            "from": from_sq,
-            "to": to_sq
+            "move": move
         })
-        self._logger.info(f"Sent move: {from_sq}-{to_sq}")
+        self.logger_.debug(f"Sent move: {move}")
         
     def send_display_board(self):
         """Send display board command"""
@@ -97,14 +120,14 @@ class GameController:
         self.session.send({
             "command": "display_board"
         })
-        self._logger.info("Sent display board command")
+        self.logger_.info("Sent display board command")
         
     def send_end_game(self):
         """Send end game command"""
         self.session.send({
             "command": "end_game"
         })
-        self._logger.info("Sent end game command")
+        self.logger_.info("Sent end game command")
     
     def run_interactive_mode(self):
         """
@@ -117,18 +140,18 @@ class GameController:
         while self.context.state == ClientState.DISCONNECTED:
             time.sleep(0.1)
         
-        self._logger.info("Starting interactive mode")
+        self.logger_.info("Starting interactive mode")
         
         # Main game loop
         while True:
-            # Show menu (view queries model/context)
+            # Show menu
             self.show_menu()
             
             # Get user input
-            choice = self.view.get_user_choice()
+            choice = self.wait_for_input()
             
             # Handle quit
-            if choice.lower() in ["quit", "q", "exit"]:
+            if choice[0].lower() == 'q':
                 if self.view.confirm_action("Are you sure you want to quit?"):
                     break
                 continue
@@ -139,7 +162,7 @@ class GameController:
             # Small delay for response processing
             time.sleep(0.1)
     
-    def _handle_menu_choice(self, choice: str):
+    def _handle_menu_choice(self, choice: tuple[str, ...]):
         """Handle user menu choice based on current state"""
         state = self.context.state
         
@@ -170,70 +193,77 @@ class GameController:
                 actions[str(option_num)] = ("upload", None)
                 
                 # Execute chosen action
-                if choice in actions:
-                    action_type, color = actions[choice]
+                if choice[0] in actions:
+                    action_type, color = actions[choice[0]]
                     
                     if action_type == "single":
-                        self.send_join("white")
-                        self.send_join("black")
+                        self.send_join_single_player()
                         self.view.display_info("Single-player mode: You control both sides")
                         
                     elif action_type == "join":
                         self.send_join(color)
-                        
-                    elif action_type == "upload":
-                        self.view.display_warning("File upload not yet implemented")
+
                 else:
                     self.view.display_error("Invalid choice")
                         
             # STATE: JOINED (can start)
             elif state == ClientState.JOINED:
-                if choice == "1":
+                if choice[0] == "1":
                     self.send_start()
                 else:
                     self.view.display_error("Invalid choice")
                         
-            # STATE: PLAYING (can move/display)
+            # STATE: PLAYING (can move/use special command)
             elif state == ClientState.PLAYING:
-                if choice == "1":
-                    from_sq, to_sq = self.view.get_move_input()
-                    if from_sq and to_sq:
-                        self.send_move(from_sq, to_sq)
-                    else:
-                        self.view.display_error("Invalid move format")
-                elif choice == "2":
-                    self.send_display_board()
-                elif choice == "3":
-                    if self.view.confirm_action("End the game?"):
-                        self.send_end_game()
-                else:
-                    self.view.display_error("Invalid choice")
+                print(choice)
+
+                # special commands
+                if choice[0] == 'd':
+                    # display board
+                    pass
+                    # TODO: implement displaying board
+                    # self.send_display_board()
+                elif choice[0] == 'f':
+                    # upload game
+                    self.run_file_mode(choice[1])
+                elif choice[0] == 'm':
+                    # regular move
+                    self.send_move(choice[1])
                         
             # STATE: GAME_OVER
             elif state == ClientState.GAME_OVER:
                 self.view.display_info("Game over. Type 'quit' to exit.")
                     
         except Exception as e:
-            self._logger.error(f"Error handling choice: {e}")
+            self.logger_.error(f"Error handling choice: {e}")
             self.view.display_error(f"Error: {e}")
     
     def run_file_mode(self, 
         file_path: Path, 
-        chunk_size: int = 4096):
+        chunk_size: int = 4096) -> bool:
         """
         File upload mode - upload and play game from file.
         
         Args:
             file_path: Path to game file
         """
-        import time
+
+        # Ensure `file_path` is a Path object
+        file_path = Path(file_path)
+        
+        file_path = (Path.cwd() / file_path).resolve()
+        self.logger_.debug(f"File path: {file_path}")
+
+        if not os.path.isfile(file_path):
+            self.logger_.warning(f"File doesn't exist: {file_path}")
+            return False
         
         try:
             file_size = file_path.stat().st_size
             filename = file_path.name
             chunks_total = (file_size + chunk_size - 1) // chunk_size
             
-            self._logger.info(f"Uploading {filename} ({file_size} bytes)")
+            self.logger_.info(f"Uploading {filename} ({file_size} bytes)")
             
             with open(file_path, 'r', encoding='utf-8') as f:
                 chunk_current = 0
@@ -256,19 +286,19 @@ class GameController:
                         "data": chunk_data
                     }
                     
-                    if not self._client.send(message):
-                        self._logger.error(f"Failed to send chunk {chunk_current}")
+                    if not self.session.send(message):
+                        self.logger_.error(f"Failed to send chunk {chunk_current}")
                         return 1
                     
                     percent = (chunk_current * 100) // chunks_total
                     if chunk_current % 10 == 0 or chunk_current == chunks_total:
-                        self._logger.info(f"Upload: {percent}%")
+                        self.logger_.info(f"Upload: {percent}%")
                     
                     time.sleep(0.01)
             
-            self._logger.info(f"Upload complete: {filename}")
-            return 0
+            self.logger_.info(f"Upload complete: {filename}")
+            return True
             
         except Exception as e:
-            self._logger.error(f"Error uploading file: {e}")
-            return 1
+            self.logger_.error(f"Error uploading file: {e}")
+            return False

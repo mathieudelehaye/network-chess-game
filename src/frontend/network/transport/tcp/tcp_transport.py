@@ -19,7 +19,7 @@ class TcpTransport(ITransport):
         self.fd = socket_fd
         self.running = False
         self.reader_thread: Optional[threading.Thread] = None
-        self._logger = Logger()
+        self.logger_ = Logger()
 
     def __del__(self):
         """Destructor ensures that the socket is closed."""
@@ -41,7 +41,7 @@ class TcpTransport(ITransport):
 
                     # Connection closed or broken
                     if len(data) == 0:
-                        self._logger.info("Server closed connection")
+                        self.logger_.info("Server closed connection")
                         self.running = False
                         break
 
@@ -50,11 +50,11 @@ class TcpTransport(ITransport):
 
                 except OSError as e:
                     if self.running:
-                        self._logger.error(f"Read error: {e}")
+                        self.logger_.error(f"Read error: {e}")
                     self.running = False
                     break
                 except Exception as e:
-                    self._logger.info(f"Read error: {e}")
+                    self.logger_.info(f"Read error: {e}")
                     self.running = False
                     break
 
@@ -68,15 +68,15 @@ class TcpTransport(ITransport):
         @param data The data to send.
         """
         if self.fd < 0:
-            self._logger.error("Cannot send: socket closed")
+            self.logger_.error("Cannot send: socket closed")
             return
 
         try:
             os.write(self.fd, data.encode("utf-8"))
         except OSError as e:
-            self._logger.error(f"Send error: {e}")
+            self.logger_.error(f"Send error: {e}")
         except Exception as e:
-            self._logger.error(f"Unexpected send error: {e}")
+            self.logger_.error(f"Unexpected send error: {e}")
 
 
     def close(self) -> None:
@@ -98,4 +98,4 @@ class TcpTransport(ITransport):
         if self.reader_thread and self.reader_thread.is_alive():
             self.reader_thread.join(timeout=1.0)
 
-        self._logger.debug("TCP transport closed")
+        self.logger_.debug("TCP transport closed")

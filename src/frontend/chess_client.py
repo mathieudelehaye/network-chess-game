@@ -46,6 +46,7 @@ Examples:
     parser.add_argument(
         "-f", "--file",
         type=Path,
+        default=None,
         help="Game file to play (non-interactive mode)"
     )
     
@@ -67,7 +68,8 @@ def main():
         client = Client(
             mode=NetworkMode.TCP,
             host=args.ip,
-            port=args.port
+            port=args.port,
+            game_file=args.file
         )
         
         client.start()

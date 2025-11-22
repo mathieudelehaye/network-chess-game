@@ -24,24 +24,10 @@ json WaitingForPlayersState::handleJoinRequest(GameContext* context, const std::
         return buildError("Invalid color");
     }
 
-    // Check if it's single-player (same session ID for both colors)
-    bool is_single_player = (context->getWhitePlayer() == context->getBlackPlayer());
-
-    // Build response for the joining player
-    json join_response = {{"type", "join_success"},
-                          {"session_id", player_id},
-                          {"color", color},
-                          {"status", context->getStatusMessage()},
-                          {"single_player", is_single_player}};
-
     if (context->bothPlayersJoined()) {
         context->transitionTo(std::make_unique<ReadyToStartState>());
 
-        if (is_single_player) {
-            logger.info("Single-player mode detected");
-        } else {
-            logger.info("Both players joined! Ready to start.");
-        }
+        logger.info("Both players joined! Ready to start.");
 
         json ready_broadcast = {{"type", "game_ready"},
                                 {"status", "Both players joined. You can now start the game!"},
@@ -50,13 +36,42 @@ json WaitingForPlayersState::handleJoinRequest(GameContext* context, const std::
         context->broadcastToAll(player_id, ready_broadcast);
 
     } else {
-        // Only one player joined so far Broadcast player_joined to OTHER
-        // clients
+        // Only one player joined so far Broadcast player_joined to other clients
         json player_joined = {
             {"type", "player_joined"}, {"color", color}, {"status", context->getStatusMessage()}};
-        context->broadcastToAll(player_id, player_joined);
+        context->broadcastToOthers(player_id, player_joined);
     }
 
+    // Send response for the joining player
+    json join_response = {{"type", "join_success"},
+                          {"session_id", player_id},
+                          {"color", color},
+                          {"status", context->getStatusMessage()},
+                          {"single_player", false}};
+
+    return join_response;
+}
+
+json WaitingForPlayersState::handleJoinRequestAsSinglePlayer(GameContext* context,
+                                                             const std::string& player_id) {
+    auto& logger = Logger::instance();
+
+    // Single player mode: player plays both colors
+    context->setWhitePlayer(player_id);
+    context->setBlackPlayer(player_id);
+    logger.info("Player " + player_id + " joined as single player");
+
+    logger.info("Single player joined! Ready to start.");
+    
+    // Transition to InProgressState
+    context->transitionTo(std::make_unique<InProgressState>());
+
+    json join_response = {{"type", "join_success"},
+    {"session_id", player_id},
+    {"status", context->getStatusMessage()},
+    {"single_player", true}};
+    
+    // Send response to the single player
     return join_response;
 }
 
@@ -76,9 +91,9 @@ json ReadyToStartState::handleStartRequest(GameContext* context, const std::stri
 
     // Broadcast game_started to ALL players
     json game_started_broadcast = {{"type", "game_started"},
-                                    {"status", context->getStatusMessage()},
-                                    {"white_player", context->getWhitePlayer()},
-                                    {"black_player", context->getBlackPlayer()}};
+                                   {"status", context->getStatusMessage()},
+                                   {"white_player", context->getWhitePlayer()},
+                                   {"black_player", context->getBlackPlayer()}};
     context->broadcastToOthers(player_id, game_started_broadcast);
 
     return start_response;
@@ -109,7 +124,7 @@ json InProgressState::handleMoveRequest(GameContext* context, const std::string&
                           {"case_dest", strike_data->case_dest},
                           {"piece", strike_data->piece},
                           {"color", strike_data->color},
-                          {"strike_number",strike_data->strike_number},
+                          {"strike_number", strike_data->strike_number},
                           {"is_capture", strike_data->is_capture},
                           {"captured_piece", strike_data->captured_piece},
                           {"captured_color", strike_data->captured_color},
