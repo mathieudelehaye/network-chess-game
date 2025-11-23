@@ -24,9 +24,9 @@ class GameContext {
     ~GameContext() = default;
 
     void setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast);
-    void unicast(const std::string& session_id, const json& message);
-    void broadcastToAll(const std::string& session_id, const json& message);
-    void broadcastToOthers(const std::string& session_id, const json& message);
+    void unicast(const std::string& session_id, const std::string& message);
+    void broadcastToAll(const std::string& session_id, const std::string& message);
+    void broadcastToOthers(const std::string& session_id, const std::string& message);
 
     json resetGame(const std::string& player_id);
 

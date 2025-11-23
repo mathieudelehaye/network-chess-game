@@ -16,13 +16,11 @@ void GameController::setSendCallbacks(UnicastCallback unicast, BroadcastCallback
     }
 }
 
-std::optional<std::string> GameController::routeMessage(const std::string& content,
+std::optional<std::string> GameController::routeMessage(const std::string& message,
                                                         const std::string& session_id) {
     // Parse application message (should be JSON)
     try {
-        json msg = json::parse(content);
-
-        return handleMessage(session_id, msg);
+        return handleMessage(session_id, message);
 
     } catch (const json::parse_error& e) {
         logger_.error("JSON parse error: " + std::string(e.what()));
@@ -92,27 +90,31 @@ void GameController::routeDisconnect(const std::string& session_id) {
             json reset_broadcast = {{"type", "game_reset"},
                                     {"reason", "all_players_disconnected"},
                                     {"status", "Waiting for players..."}};
-            game_context_->broadcastToOthers(session_id, reset_broadcast);
+            game_context_->broadcastToOthers(session_id, reset_broadcast.dump());
         }
     }
 }
 
-std::optional<std::string> GameController::handleMessage(const std::string& session_id,
-                                                         const json& msg) {
+std::optional<std::string> GameController::handleMessage(
+    const std::string& session_id,
+    const std::string& message) {
+
     logger_.debug("Routing message for session: " + session_id);
 
+    auto json_message = json::parse(message);
+
     // Command-based routing
-    if (msg.contains("command")) {
-        std::string command = msg["command"];
+    if (json_message.contains("command")) {
+        std::string command = json_message["command"];
 
         if (command == "upload_game") {
-            return handleFileUploadChunk(msg, session_id);
+            return handleFileUploadChunk(json_message, session_id);
         } else if (command == "join_game") {
-            return handleJoinGame(session_id, msg["single_player"], msg["color"]);
+            return handleJoinGame(session_id, json_message["single_player"], json_message["color"]);
         } else if (command == "start_game") {
             return handleStartGame(session_id);
         } else if (command == "make_move") {
-            return handleMoveToParse(session_id, msg["move"]);
+            return handleMoveToParse(session_id, json_message["move"]);
         } else if (command == "end_game") {
             return handleEndGame(session_id);
         } else if (command == "display_board") {
@@ -126,8 +128,10 @@ std::optional<std::string> GameController::handleMessage(const std::string& sess
     return error.dump();
 }
 
-std::string GameController::handleJoinGame(const std::string& session_id, bool single_player,
-                                           const std::string& color) {
+std::string GameController::handleJoinGame(
+    const std::string& session_id, 
+    bool single_player,
+    const std::string& color) {
     logger_.info("Session " + session_id + " joining as " + color);
 
     json response;
@@ -217,15 +221,17 @@ std::string GameController::handleDisplayBoard() {
 
 // TODO: file chunk upload and file reconstruction should be moved to a separate
 // class in the Utils part of the backend source code.
-std::optional<std::string> GameController::handleFileUploadChunk(const nlohmann::json& msg,
-                                                                 const std::string& session_id) {
+std::optional<std::string> GameController::handleFileUploadChunk(
+    const nlohmann::json& json_message,
+    const std::string& session_id) {
+
     try {
-        auto metadata = msg["metadata"];
+        auto metadata = json_message["metadata"];
         std::string filename = metadata["filename"];
         int total_size = metadata["total_size"];
         int chunks_total = metadata["chunks_total"];
         int chunk_current = metadata["chunk_current"];
-        std::string chunk_data = msg["data"];
+        std::string chunk_data = json_message["data"];
 
         std::string upload_key = session_id + ":" + filename;
         auto& upload = file_uploads_[upload_key];
@@ -305,6 +311,7 @@ void GameController::processFileContent(const std::string& session_id, const std
     std::string last_error;
 
     bool game_complete = false;
+    std::string result = "";
 
     for (size_t i = 0; i < moves.size(); ++i) {
         const auto& move = moves[i];
@@ -331,9 +338,13 @@ void GameController::processFileContent(const std::string& session_id, const std
             // Check if game is over
             if (move_json.contains("strike")) {
                 auto strike = move_json["strike"];
-                if (strike.value("checkmate", false) || strike.value("stalemate", false)) {
+                bool checkmate = strike.value("checkmate", false);
+                bool checkstale = strike.value("stalemate", false);
+                if (checkmate || checkstale) {
                     logger_.info("Game ended at move " + std::to_string(i + 1));
+                    const std::string winner_color = strike.value("color", "");
                     game_complete = true;
+                    result = checkmate ? "checkmate (" + winner_color + " wins)" : "checkmate (" + winner_color + " wins)";
                     break;
                 }
             }
@@ -347,7 +358,8 @@ void GameController::processFileContent(const std::string& session_id, const std
 
     if (game_complete) {
         // Send final game_complete message
-        json final_response = {{"type", "game_complete"},
+        json final_response = {{"type", "game_over"},
+                               {"result", result},
                                {"filename", filename},
                                {"total_moves", successful_moves},
                                {"requested_moves", moves.size()}};
@@ -356,6 +368,6 @@ void GameController::processFileContent(const std::string& session_id, const std
             final_response["error"] = last_error;
         }
 
-        game_context_->unicast(session_id, final_response);
+        game_context_->unicast(session_id, final_response.dump());
     }
 }

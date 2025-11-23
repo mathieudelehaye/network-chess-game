@@ -113,10 +113,10 @@ class GameModel:
     @staticmethod
     def build_strike_suffix(strike: dict) -> str:
         """Build check/checkmate/stalemate suffix"""
-        if strike.get("is_checkmate"):
+        if strike.get("checkmate"):
             return ". Checkmate"
-        elif strike.get("is_check"):
+        elif strike.get("check"):
             return ". Check"
-        elif strike.get("is_stalemate"):
+        elif strike.get("stalemate"):
             return ". Stalemate"
         return ""

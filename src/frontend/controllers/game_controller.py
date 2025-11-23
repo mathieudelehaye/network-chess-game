@@ -273,8 +273,8 @@ class GameController:
         })
         self._logger_.info("Sent end game command")
 
-    def _handle_menu_choice(self, choice: tuple[str, ...]):
         """Handle user menu choice based on current state"""
+    def _handle_menu_choice(self, choice: tuple[str, ...]):
         state = self._context.state
         
         try:
@@ -342,7 +342,9 @@ class GameController:
                         
             # STATE: GAME_OVER
             elif state == ClientState.GAME_OVER:
-                self._console_view.display_info("Game over. Type 'quit' to exit.")
+                self._console_view.display_info("Game over. Type '1' to restart or 'q' to exit.")
+                if choice[0] == "1":
+                    self.send_end_game()
                     
         except Exception as e:
             self._logger_.error(f"Error handling choice: {e}")

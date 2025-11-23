@@ -43,7 +43,7 @@ class GameController {
     void setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast);
 
    private:
-    std::optional<std::string> handleMessage(const std::string& session_id, const json& msg);
+    std::optional<std::string> handleMessage(const std::string& session_id, const std::string& message);
 
     /**
      * @brief Handle join_game command

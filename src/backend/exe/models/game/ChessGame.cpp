@@ -171,7 +171,7 @@ std::string ChessGame::getBoardFormatted() const {
     std::ostringstream result;
 
     // Top file labels
-    result << "  a   b   c   d   e   f   g   h\n";
+    result << "    a   b   c   d   e   f   g   h\n";
     result << " ---------------------------------\n";
 
     // Process each rank (8 to 1)
@@ -210,7 +210,7 @@ std::string ChessGame::getBoardFormatted() const {
     }
 
     // Bottom file labels
-    result << "  a   b   c   d   e   f   g   h\n";
+    result << "    a   b   c   d   e   f   g   h\n";
 
     return result.str();
 }

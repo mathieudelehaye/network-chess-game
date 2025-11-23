@@ -15,19 +15,19 @@ void GameContext::setSendCallbacks(UnicastCallback unicast, BroadcastCallback br
     broadcast_callback_ = std::move(broadcast);
 }
 
-void GameContext::unicast(const std::string& session_id, const json& message) {
+void GameContext::unicast(const std::string& session_id, const std::string& message) {
     if (unicast_callback_) {
         unicast_callback_(session_id, message);
     }
 }
 
-void GameContext::broadcastToAll(const std::string& session_id, const json& message) {
+void GameContext::broadcastToAll(const std::string& session_id, const std::string& message) {
     if (broadcast_callback_) {
         broadcast_callback_(session_id, message, true);
     }
 }
 
-void GameContext::broadcastToOthers(const std::string& session_id, const json& message) {
+void GameContext::broadcastToOthers(const std::string& session_id, const std::string& message) {
     if (broadcast_callback_) {
         broadcast_callback_(session_id, message, false);
     }
@@ -62,7 +62,7 @@ json GameContext::resetGame(const std::string& player_id) {
                                {"status", getStatusMessage()},
                                {"white_player", getWhitePlayer()},
                                {"black_player", getBlackPlayer()}};
-    broadcastToOthers(player_id, game_end_broadcast);
+    broadcastToOthers(player_id, game_end_broadcast.dump());
 
     return end_response;
 }

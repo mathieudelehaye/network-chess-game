@@ -7,16 +7,16 @@ from network.transport.transport_interface import ITransport
 from utils.logger import Logger
 
 
-class IpcTransport(ITransport):
-    """Class for Unix domain socket (IPC) transport"""
+class TcpTransport(ITransport):
+    """Class for TCP transport"""
 
-    def __init__(self, fd: int):
+    def __init__(self, socket_fd: int):
         """
-        Construct an IPC transport with an existing socket file descriptor.
+        Construct a TCP transport with an existing socket.
 
-        @param fd The file descriptor of the connected Unix socket.
+        @param socket_fd The file descriptor of the connected socket.
         """
-        self.fd = fd
+        self.fd = socket_fd
         self.running = False
         self.reader_thread: Optional[threading.Thread] = None
         self.logger_ = Logger()
@@ -25,14 +25,6 @@ class IpcTransport(ITransport):
         """Destructor ensures that the socket is closed."""
         self.close()
 
-    def connect(self) -> bool:
-        """
-        For IPC transport, the socket is already connected.
-        
-        @return True (socket already connected)
-        """
-        return True
-
     def start(self, on_receive: Callable[[str], None]) -> None:
         """
         Start receiving data on the transport.
@@ -40,15 +32,12 @@ class IpcTransport(ITransport):
         @param on_receive Callback function to handle received data.
         """
         if self.fd < 0:
-            self.logger_.error("Cannot start: invalid file descriptor")
+            self.logger_.error("Cannot start: not connected")
             return
         
         self.running = True
-        self.logger_.debug(f"Starting reader thread for Unix socket fd {self.fd}")
 
         def reader_loop():
-            self.logger_.debug(f"Reader thread started for Unix socket fd {self.fd}")
-            
             while self.running:
                 try:
                     # Read from socket (max 4096 bytes)
@@ -65,15 +54,13 @@ class IpcTransport(ITransport):
 
                 except OSError as e:
                     if self.running:
-                        self.logger_.error(f"Read error on Unix socket fd {self.fd}: {e}")
+                        self.logger_.error(f"Read error: {e}")
                     self.running = False
                     break
                 except Exception as e:
-                    self.logger_.error(f"Unexpected read error on Unix socket fd {self.fd}: {e}")
+                    self.logger_.info(f"Read error: {e}")
                     self.running = False
                     break
-            
-            self.logger_.debug(f"Reader thread EXITING for Unix socket fd {self.fd}")
 
         self.reader_thread = threading.Thread(target=reader_loop, daemon=True)
         self.reader_thread.start()
@@ -88,29 +75,24 @@ class IpcTransport(ITransport):
             self.logger_.error("Cannot send: socket closed")
             return
 
-        if not self.running:
-            return
-
         try:
             os.write(self.fd, data.encode("utf-8"))
         except OSError as e:
-            self.logger_.error(f"Write error on Unix socket fd {self.fd}: {e}")
-            self.running = False
+            self.logger_.error(f"Send error: {e}")
         except Exception as e:
-            self.logger_.error(f"Unexpected send error on Unix socket fd {self.fd}: {e}")
-            self.running = False
+            self.logger_.error(f"Unexpected send error: {e}")
+
 
     def close(self) -> None:
-        """Close the Unix socket and terminate the reading loop."""
-        if not self.running:
-            return
-            
+        """Close the TCP socket and terminate the reading loop."""
         self.running = False
-        self.logger_.debug(f"Closing Unix socket transport on fd {self.fd}")
 
         if self.fd >= 0:
             try:
-                os.close(self.fd)
+                # Shutdown both directions
+                sock = socket.socket(fileno=self.fd)
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
             except Exception:
                 pass
             finally:
@@ -120,4 +102,4 @@ class IpcTransport(ITransport):
         if self.reader_thread and self.reader_thread.is_alive():
             self.reader_thread.join(timeout=1.0)
 
-        self.logger_.debug("Unix socket transport closed")
+        self.logger_.debug("TCP transport closed")

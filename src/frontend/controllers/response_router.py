@@ -37,6 +37,7 @@ class ResponseRouter:
         
         try:            
             response = json.loads(message)
+            
         except json.JSONDecodeError as e:
             self.logger_.error(f"Invalid JSON from server: {e}")
             self.logger_.debug(f"Raw data: {message}")
@@ -191,21 +192,20 @@ class ResponseRouter:
                 self.console_view.display_info("Board is displayed in GUI window")
             else:
                 # In console mode, display ASCII board
-                self.game_view.display_board(ascii)
+                self.game_view.display_board(board)
         else:
             self.console_view.display_error("No board data received")
         
     def _handle_game_over(self, response: dict):
         """Handle game over"""
         result = response.get('result', 'Unknown')
-        reason = response.get('reason', '')
         
         self.context.on_game_over()
         
         # Display using both views
         self.game_view.display_game_over(result)
-        if reason:
-            self.console_view.display_info(f"Reason: {reason}")
+
+        self._refresh_menu()
     
     def _handle_game_reset(self, response: dict):
         """Handle game reset"""

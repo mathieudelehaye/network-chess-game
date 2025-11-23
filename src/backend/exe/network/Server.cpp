@@ -25,16 +25,14 @@ Server::Server(NetworkMode mode, int port) :
 
 void Server::setupSendCallbacks() {
     shared_controller_->setSendCallbacks(
-        [this](const std::string& session_id, const json& msg) {
+        [this](const std::string& session_id, const std::string& message) {
             auto& logger = Logger::instance();
-            std::string message = msg.dump();
             logger.trace("Unicast callback called with message: " + message);
 
-            this->unicastTo(session_id, msg);
+            this->unicastTo(session_id, message);
         },
-        [this](const std::string& originating_session_id, const json& msg, bool to_all) {
+        [this](const std::string& originating_session_id, const std::string& message, bool to_all) {
             auto& logger = Logger::instance();
-            std::string message = msg.dump();
             logger.trace("Broadcast callback called with message: `" + message + "` sent to " +
                          (to_all ? "all" : ("others than " + originating_session_id)));
 

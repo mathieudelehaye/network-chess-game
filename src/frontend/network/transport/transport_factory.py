@@ -1,6 +1,6 @@
 from network.transport.transport_interface import TransportMode
-from network.transport.tcp.tcp_transport import TcpTransport
-from network.transport.ipc.ipc_transport import IpcTransport
+from network.transport.tcp_transport import TcpTransport
+from network.transport.ipc_transport import IpcTransport
 from network.transport.transport_interface import ITransport
 
 

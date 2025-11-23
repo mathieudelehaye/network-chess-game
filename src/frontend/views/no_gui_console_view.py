@@ -1,7 +1,7 @@
 """
 View layer for displaying game information to the user, which are only used when
-the ViewMode.CONSOLE mode is selected. Some other console functions might be
-shared between the ViewMode.CONSOLE and ViewMode.GUI modes, and therefore will
+the ViewMode.NOGUI mode is selected. Some other console functions might be
+shared between the ViewMode.NOGUI and ViewMode.GUI modes, and therefore will
 be implemented by SharedConsoleView class instead.
 """
 
@@ -37,7 +37,6 @@ class NoGUIConsoleView(IView):
         print("\n" + "="*60)
         print(f"GAME OVER: {result.upper()}")
         print("="*60 + "\n")
-        self.logger_.info(f"Game Over: {result}")
     
     def wait_for_input(self, info: dict) -> tuple[str, ...]:
         """Get move from user (e.g., 'e2-e4'). Special commands
@@ -54,7 +53,7 @@ class NoGUIConsoleView(IView):
         single_player = info.get('player_number', 1) == 1
         gui_mode = info.get('view_mode', False)
 
-        command = input("Enter move (or special command): ").strip()
+        command = input("Enter move, e.g. e2-e4 (or special command): ").strip()
 
         # Handle empty input
         if not command:
@@ -63,7 +62,7 @@ class NoGUIConsoleView(IView):
         # Handle special commands
         if command[0] == ':':
             if len(command) < 2:
-                self.display_error("Invalid command")
+                # Invalid input command
                 return (None, None)
         
             if single_player:
@@ -75,7 +74,7 @@ class NoGUIConsoleView(IView):
                 if not gui_mode and command[1] == 'f':
                     pos = command[2:].find(' ')
                     if pos == -1:
-                        self.display_error("Invalid file command. Usage: :f <file name>")
+                        # Invalid command usage
                         return (None, None)
                     file_path = command[2 + pos:].strip()
                     return ('f', file_path)
@@ -90,5 +89,8 @@ class NoGUIConsoleView(IView):
         if '-' in command:
             return ('m', command)
         
-        self.display_error("Invalid input format")
         return (None, None)
+
+    def cleanup(self) -> None:
+        """Clean up view resources"""
+        pass

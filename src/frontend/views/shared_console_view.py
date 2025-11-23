@@ -102,7 +102,7 @@ class SharedConsoleView:
             
         # STATE: GAME_OVER
         elif state_name == "GAME_OVER":
-            print("Game Over!")
+            print("1. Restart Game")
             print("Q. Quit")
         
         print("="*60)
@@ -132,6 +132,6 @@ class SharedConsoleView:
         response = input(f"{message} (yes/no): ").strip().lower()
         return response in ['yes', 'y']
     
-    def wait_for_user_choice(self) -> str:
+    def wait_for_user_choice(self) -> tuple[str, ...]:
         """Get user menu choice"""
-        return input("\nEnter choice: ").strip()
+        return (input("\nEnter choice: ").strip(),)

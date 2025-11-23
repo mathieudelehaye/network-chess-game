@@ -35,13 +35,13 @@ json WaitingForPlayersState::handleJoinRequest(
                                 {"status", "Both players joined. You can now start the game!"},
                                 {"white_player", context->getWhitePlayer()},
                                 {"black_player", context->getBlackPlayer()}};
-        context->broadcastToAll(player_id, ready_broadcast);
+        context->broadcastToAll(player_id, ready_broadcast.dump());
 
     } else {
         // Only one player joined so far Broadcast player_joined to other clients
         json player_joined = {
             {"type", "player_joined"}, {"color", color}, {"status", context->getStatusMessage()}};
-        context->broadcastToOthers(player_id, player_joined);
+        context->broadcastToOthers(player_id, player_joined.dump());
     }
 
     // Send response for the joining player
@@ -109,7 +109,7 @@ json ReadyToStartState::handleStartRequest(GameContext* context, const std::stri
             {"fen", fen}
         }}
     };
-    context->broadcastToOthers(player_id, game_started_broadcast);
+    context->broadcastToOthers(player_id, game_started_broadcast.dump());
 
     return start_response;
 }
@@ -173,7 +173,7 @@ json InProgressState::handleMoveRequest(
     }
 
     // Broadcast move to other players
-    context->broadcastToOthers(player_id, response);
+    context->broadcastToOthers(player_id, response.dump());
 
     return response;
 }
@@ -192,7 +192,7 @@ json InProgressState::handleDisplayBoard(GameContext* context) {
 
     try {
         std::string boardASCII = game->getBoardFormatted();
-        logger.trace("Received ASCII board: " + boardASCII);
+        logger.trace("Received ASCII board:\n" + boardASCII);
 
         json response;
         response["type"] = "board_display";

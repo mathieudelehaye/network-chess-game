@@ -1,7 +1,7 @@
 """
 View layer for displaying game information to the user, which are only used when
 the ViewMode.GUI mode is selected. Some other console functions might be shared
-between the ViewMode.CONSOLE and ViewMode.GUI modes, and therefore will be
+between the ViewMode.NOGUI and ViewMode.GUI modes, and therefore will be
 implemented by SharedConsoleView class instead.
 """
 
@@ -429,12 +429,10 @@ class GuiView(IView):
         }
         return pieces.get(symbol, symbol)
 
-    def display_game_over(self, result: str, reason: str = "") -> None:
+    def display_game_over(self, result: str) -> None:
         """Display game over in both GUI and console"""
         print("\n" + "=" * 60)
         print(f" GAME OVER - {result}")
-        if reason:
-            print(f" Reason: {reason}")
         print("=" * 60 + "\n")
         
         if not self._initialised or not self.screen:
@@ -459,7 +457,7 @@ class GuiView(IView):
         pygame.display.flip()
 
     def cleanup(self) -> None:
-        """Clean up pygame resources"""
+        """Clean up view resources"""
         if self._initialised:
             pygame.quit()
             self._initialised = False

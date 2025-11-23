@@ -6,7 +6,7 @@ from views.view_interface import IView
 
 class ViewMode(Enum):
     """View mode selection"""
-    CONSOLE = "console"
+    NOGUI = "no_gui"
     GUI = "gui"
 
 
@@ -23,7 +23,7 @@ class ViewFactory:
         """
         if mode == ViewMode.GUI:
             return GuiView()
-        elif mode == ViewMode.CONSOLE:
+        elif mode == ViewMode.NOGUI:
             return NoGUIConsoleView()
         else:
             raise ValueError(f"Unsupported view mode: {mode}")
