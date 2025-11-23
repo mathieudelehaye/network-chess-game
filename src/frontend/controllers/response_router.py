@@ -212,6 +212,10 @@ class ResponseRouter:
         self.context.on_reset()
         self.model.reset()
         self.console_view.display_info("Game has been reset")
+
+        # Close the GUI window
+        if self.view_mode == ViewMode.GUI:
+            self.game_view.cleanup()
         
         self._refresh_menu()
         

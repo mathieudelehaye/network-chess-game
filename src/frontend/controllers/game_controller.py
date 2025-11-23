@@ -7,6 +7,7 @@ from models.client_context import ClientContext, ClientState
 from models.game_model import GameModel
 from utils.logger import Logger
 from views.view_interface import IView
+from views.view_factory import ViewMode
 from views.shared_console_view import SharedConsoleView
 
 class GameController:
@@ -15,7 +16,7 @@ class GameController:
     Uses SharedConsoleView for common I/O and IView for game-specific display.
     """
     
-    def __init__(self, game_view: IView, console_view: SharedConsoleView):
+    def __init__(self, view_mode: ViewMode, game_view: IView, console_view: SharedConsoleView):
         """
         Initialize controller with two view objects.
         
@@ -26,6 +27,7 @@ class GameController:
         self._context = ClientContext()
         self._model = GameModel()
 
+        self.view_mode = view_mode
         self._game_view = game_view          # IView implementation (GUI or Console)
         self._console_view = console_view    # SharedConsoleView for menus/messages
         
@@ -78,6 +80,9 @@ class GameController:
 
             # Handle quit
             if choice[0].lower() == 'q':
+                if choice[0]:
+                    # Quit with no confirmation
+                    break
                 if self._console_view.confirm_action("Are you sure you want to quit?"):
                     break
                 continue
@@ -172,6 +177,7 @@ class GameController:
             "player_color": self._context.player_color,
             "session_id": self._context.session_id,
             "player_number": self._context.player_number,
+            "gui_mode": self.view_mode == ViewMode.GUI,
         }
 
         return self._console_view.display_menu(info)
@@ -188,6 +194,7 @@ class GameController:
             "black_joined": self._model.black_joined,
             "current_turn": self._model.current_turn,
             "move_count": self._model.move_count,
+            "gui_mode": self.view_mode == ViewMode.GUI,
         }
 
         if state_name == "PLAYING":

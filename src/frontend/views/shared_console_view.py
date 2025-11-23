@@ -30,6 +30,7 @@ class SharedConsoleView:
         black_joined = info.get('black_joined', False)
         move_count = info.get('move_count', 0)
         player_number = info.get('player_number', 1)
+        gui_mode = info.get('gui_mode', False)
         
         print(f"\nStatus: {state_name}")
         
@@ -49,6 +50,11 @@ class SharedConsoleView:
             print(f"\n{turn_msg}")
             print(f"Move count: {move_count}")
         
+        # Don't show the options in GUI mode
+        # TODO: improve integration
+        if gui_mode and state_name == "PLAYING":
+            return
+
         print("\n" + "-"*60)
         print("MENU OPTIONS:")
         print("-"*60)
@@ -84,6 +90,7 @@ class SharedConsoleView:
             
         # STATE: PLAYING - Game in progress
         elif state_name == "PLAYING":
+            # PLAYING - state menu only displayed in non-GUI mode
             print("Waiting for the next strike.")
             print()
             print("Special commands:")

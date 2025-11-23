@@ -61,7 +61,7 @@ class Client:
         fd = self.socket.fileno()
         transport = TransportFactory.create(fd, self.transport_mode)
 
-        self.controller = GameController(self.game_view, self.console_view)
+        self.controller = GameController(self.view_mode, self.game_view, self.console_view)
         self.router = ResponseRouter(self.controller, self.view_mode)
 
         self.session = ClientSession(

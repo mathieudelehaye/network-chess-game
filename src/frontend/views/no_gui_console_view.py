@@ -43,7 +43,7 @@ class NoGUIConsoleView(IView):
         """Get move from user (e.g., 'e2-e4'). Special commands
         are also allowed, including:
           - `:r                 => restart (only in single player mode)
-          - `:f <file name>`    => upload game file (only in single player mode)
+          - `:f <file name>`    => upload game file (only in single player)
           - `:d`                => display board
           - `:q`                => quit the game
 
@@ -52,6 +52,7 @@ class NoGUIConsoleView(IView):
         """
 
         single_player = info.get('player_number', 1) == 1
+        gui_mode = info.get('view_mode', False)
 
         command = input("Enter move (or special command): ").strip()
 
@@ -66,9 +67,12 @@ class NoGUIConsoleView(IView):
                 return (None, None)
         
             if single_player:
+                # Resetting the game is only possible in single-player mode
                 if command[1] == 'r':
                     return ('r', None)
-                if command[1] == 'f':
+
+                # Uploading a game file is only possible in non-gui mode
+                if not gui_mode and command[1] == 'f':
                     pos = command[2:].find(' ')
                     if pos == -1:
                         self.display_error("Invalid file command. Usage: :f <file name>")

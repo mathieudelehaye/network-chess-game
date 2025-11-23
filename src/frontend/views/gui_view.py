@@ -32,6 +32,9 @@ class GuiView(IView):
     DARK_SQUARE = (181, 136, 99)
     SELECTED_COLOUR = (246, 246, 130)
     BG_COLOUR = (50, 50, 50)
+    BUTTON_COLOUR = (70, 70, 70)
+    BUTTON_HOVER_COLOUR = (90, 90, 90)
+    BUTTON_TEXT_COLOUR = (255, 255, 255)
 
     def __init__(self):
         """Initialise pygame GUI - window created lazily on first display_board"""
@@ -50,6 +53,10 @@ class GuiView(IView):
         # Game state
         self.board_state = None
         self.selected_square = None
+
+        # Button rectangles
+        self.restart_button_rect = None                   
+        self.quit_button_rect = None                    
         
         self.logger_.info("GUI view created (not initialised yet)")
     
@@ -80,6 +87,8 @@ class GuiView(IView):
             self.logger_.error(f"Failed to initialise pygame: {e}")
             raise
     
+    # TODO: sprite display should be improved, since their transparency is not
+    # optimal 
     def _load_sprite_sheet(self):
         """Load chess pieces from sprite sheet with transparency support"""
         # Path to sprite sheet
@@ -199,7 +208,7 @@ class GuiView(IView):
         
         return board
     
-    def _render(self) -> None:
+    def _render(self, show_buttons: bool = False, is_single_player: bool = False) -> None:
         """Render the entire board and UI"""
         if not self._initialised or not self.screen:
             return
@@ -220,7 +229,7 @@ class GuiView(IView):
         self._draw_pieces()
         
         # Draw info panel
-        self._draw_info_panel()
+        self._draw_info_panel(show_buttons, is_single_player)
         
         # Update display
         pygame.display.flip()
@@ -256,7 +265,7 @@ class GuiView(IView):
                     # Blit with alpha channel preserves transparency
                     self.screen.blit(self.piece_images[piece], (x, y))
 
-    def _draw_info_panel(self) -> None:
+    def _draw_info_panel(self, show_buttons: bool = False, is_single_player: bool = False) -> None:
         """Draw information panel on the right side"""
         panel_x = self.BOARD_SIZE + 10
         
@@ -278,6 +287,39 @@ class GuiView(IView):
             self.screen.blit(text, (panel_x, y_offset))
             y_offset += 30
 
+        # Draw buttons if in wait_for_input mode 
+        if show_buttons:
+            y_offset += 40
+            button_width = 160
+            button_height = 40
+
+            # Restart button (only for single player)
+            if is_single_player:
+                self.restart_button_rect = pygame.Rect(panel_x, y_offset, button_width, button_height)
+                self._draw_button(self.restart_button_rect, "Restart", pygame.mouse.get_pos())
+                y_offset += button_height + 20
+            else:
+                self.restart_button_rect = None
+            
+            # Quit button (always visible)
+            self.quit_button_rect = pygame.Rect(panel_x, y_offset, button_width, button_height)
+            self._draw_button(self.quit_button_rect, "Quit", pygame.mouse.get_pos())  
+
+    def _draw_button(self, rect: pygame.Rect, text: str, mouse_pos: tuple) -> None:  
+        """Draw a button with hover effect"""
+        # Check if mouse is hovering over button
+        is_hover = rect.collidepoint(mouse_pos)
+        colour = self.BUTTON_HOVER_COLOUR if is_hover else self.BUTTON_COLOUR
+        
+        # Draw button background
+        pygame.draw.rect(self.screen, colour, rect, border_radius=5)
+        pygame.draw.rect(self.screen, (100, 100, 100), rect, width=2, border_radius=5)
+        
+        # Draw button text (centered)
+        text_surface = self.font_small.render(text, True, self.BUTTON_TEXT_COLOUR)
+        text_rect = text_surface.get_rect(center=rect.center)
+        self.screen.blit(text_surface, text_rect)
+
     def _coords_to_algebraic(self, row: int, col: int) -> str:
         """Convert board coordinates to algebraic notation"""
         file = chr(ord('a') + col)
@@ -292,20 +334,31 @@ class GuiView(IView):
         row = 8 - int(algebraic[1])
         return (row, col)
 
-    def wait_for_input(self, _) -> tuple[str, ...]:
+    def wait_for_input(self, info) -> tuple[str, ...]:
         """
-        Wait for user to make a move by clicking
+        Wait for user to make a move by clicking or press buttons
+        
+        Args:
+            info: Dictionary containing game info (player_number, etc.)
         
         Returns:
-            Tuple containing move in format ("e2e4",)
+            Tuple containing command:
+            - ("e2-e4",) for moves
+            - ("r", None) for restart
+            - ("q", None) for quit
         """
         if not self._initialised:
             self.logger_.error("Cannot wait for input - pygame not initialised")
             return (":q",)
         
+        # Check if single player mode           
+        is_single_player = info.get('player_number', 1) == 1      
+
         from_square = None
         
         while True:
+            mouse_pos = pygame.mouse.get_pos()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return (":q",)
@@ -313,6 +366,19 @@ class GuiView(IView):
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
                     
+                    # Check if Restart button clicked (single player only)
+                    if is_single_player and self.restart_button_rect and self.restart_button_rect.collidepoint(x, y):
+                        self.logger_.info("Restart button clicked")
+                        print("\n>>> Restarting game <<<\n")
+                        return ('r', None)
+                    
+                    # Check if Quit button clicked
+                    if self.quit_button_rect and self.quit_button_rect.collidepoint(x, y):
+                        self.logger_.info("Quit button clicked")
+                        print("\n>>> Quitting game <<<\n")
+                        # Quit with no confirmation
+                        return ('q', True)       
+
                     # Check if click is on board
                     if x < self.BOARD_SIZE and y < self.BOARD_SIZE:
                         row = y // self.SQUARE_SIZE
@@ -348,6 +414,9 @@ class GuiView(IView):
                             # Return as tuple for compatibility with interface
                             return ('m', move)
             
+            # Re-render to update button hover effects 
+            self._render(show_buttons=True, is_single_player=is_single_player)
+          
             pygame.time.wait(10)
 
     def _get_piece_name(self, symbol):
