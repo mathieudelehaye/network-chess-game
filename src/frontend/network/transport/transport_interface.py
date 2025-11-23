@@ -1,5 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from enum import Enum
+
+
+class TransportMode(Enum):
+    TCP = "tcp"
+    IPC = "ipc"
 
 
 class ITransport(ABC):

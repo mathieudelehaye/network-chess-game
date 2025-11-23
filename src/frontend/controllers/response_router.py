@@ -1,8 +1,6 @@
 import json
 from utils.logger import Logger
-from models.client_context import ClientContext
-from models.game_model import GameModel
-from views.console_view import ConsoleView
+from views.view_factory import ViewMode
 
 
 class ResponseRouter:
@@ -12,7 +10,8 @@ class ResponseRouter:
     
     def __init__(
         self, 
-        game_controller
+        game_controller,
+        view_mode: ViewMode,
     ):
         """
         Initialise message router.
@@ -22,10 +21,16 @@ class ResponseRouter:
         """
 
         self.logger_ = Logger()
-        self.context = ClientContext()  # gets the singleton instance
-        self.model = GameModel()        # gets the singleton instance
-        self.view = ConsoleView()
         self.game_controller = game_controller
+        self.view_mode = view_mode
+
+        # Get references from game controller (singleton instances)
+        self.context = game_controller.context
+        self.model = game_controller.model
+        
+        # Get view references from game controller
+        self.game_view = game_controller.game_view
+        self.console_view = game_controller.console_view
     
     def route(self, message: str):
         """Route incoming server message to appropriate handler"""
@@ -60,12 +65,13 @@ class ResponseRouter:
         else:
             self.logger_.warning(f"Unknown message type: {msg_type}")
     
-    # Message handlers
+    # ========== Message Handlers ==========
+
     def _handle_session_created(self, response: dict):
         """Handle session creation"""
         session_id = response.get("session_id")
         self.context.on_connected(session_id)
-        self.view.display_connected(session_id)
+        self.console_view.display_connected(session_id)
         
     def _handle_join_success(self, response: dict):
         """Handle successful join"""
@@ -78,16 +84,15 @@ class ResponseRouter:
 
         if not single_player:
             self.model.set_player_joined(color)
-            self.view.display_success(f"Joined as {color}")
+            self.console_view.display_success(f"Joined as {color}")
         else:
             # Player 1 play both colors  
             self.model.set_player_joined("white")
             self.model.set_player_joined("black")
-            self.model.start_game()
-            self.view.display_success(f"Joined as white and black")
+            self.console_view.display_success(f"Joined as white and black")
         
         if status:
-            self.view.display_info(status)
+            self.console_view.display_info(status)
         
     def _handle_player_joined(self, response: dict):
         """Handle notification that another player joined"""
@@ -96,12 +101,12 @@ class ResponseRouter:
         
         self.model.set_player_joined(color)
         
-        self.view.display_info(f"\n>>> Another player joined as {color} <<<")
+        self.console_view.display_info(f"\n>>> Another player joined as {color} <<<")
         if status:
-            self.view.display_info(f">>> {status} <<<")
+            self.console_view.display_info(f">>> {status} <<<")
         
         if self.model.both_players_joined:
-            self.view.display_info(">>> Both players ready! Press Enter to refresh <<<")
+            self.console_view.display_info(">>> Both players ready! Press Enter to refresh <<<")
         
         self._refresh_menu()
 
@@ -116,62 +121,104 @@ class ResponseRouter:
         if black_player:
             self.model.set_player_joined("black")
         
-        self.view.display_info(f"\n>>> {status} <<<")
-        self.view.display_info(">>> Press Enter to refresh menu <<<")
+        self.console_view.display_info(f"\n>>> {status} <<<")
+        self.console_view.display_info(">>> Press Enter to refresh menu <<<")
         
         self._refresh_menu()
         
-    def _handle_game_started(self, _):
+    def _handle_game_started(self, response: dict):
         """Handle game started"""
         self.context.on_game_started()
         self.model.start_game()
         
+        board = response.get("board", {})
+        
         message = "1-player game started!" if self.context.player_number == 1 else "2-player game started!"
-        self.view.display_success(message)
+        self.console_view.display_success(message)
+        
+        # Display initial board
+        if board:
+            fen = board.get('fen', '')
+            
+            # Display board based on view mode
+            if self.view_mode == ViewMode.GUI:
+                # GUI displays FEN
+                self.game_view.display_board(fen)
+            # Console mode doesn't auto-display (only on 'd' command)
         
         self._refresh_menu()
         
     def _handle_move_result(self, response: dict):
-        """Handle move result"""
+        """Handle move result - display board and move info"""
         strike = response.get("strike", {})
+        board = response.get("board", "")
         
+        # Build move description
         description = self.model.build_move_description(strike)
         suffix = self.model.build_strike_suffix(strike)
-        self.view.display_info(description + suffix)
+        self.console_view.display_info(description + suffix)
         
-        # Update turn to (1 + last move received from the server)
-        self.model.update_turn(strike.get("strike_number", None)+1)
+        # Update turn
+        strike_number = strike.get("strike_number")
+        if strike_number is not None:
+            self.model.update_turn(strike_number + 1)
+
+        # Update model with board data
+        if board:
+            fen = board.get('fen', '')
+            
+            # Display based on view mode
+            if self.view_mode == ViewMode.GUI:
+                # GUI auto-displays board after each move with animation
+                self.game_view.display_board(fen)
+            # Console mode doesn't auto-display (only on ':d' command)
         
+        # Check for game over conditions
         if strike.get('is_checkmate'):
             self.context.on_game_over()
-            self.view.display_game_over("Checkmate")
+            self.game_view.display_game_over("Checkmate")
         elif strike.get('is_stalemate'):
             self.context.on_game_over()
-            self.view.display_game_over("Stalemate")
+            self.game_view.display_game_over("Stalemate")
             
     def _handle_board_display(self, response: dict):
-        """Handle board display"""
-        board = response.get('data', {}).get('board', '')
-        self.view.display_board(board)
+        """Handle board display (from 'd' command)"""
+        board = response.get('data', {}).get('board', {})
+
+        if board:
+            if self.view_mode == ViewMode.GUI:
+                # In GUI mode, board is already displayed
+                self.console_view.display_info("Board is displayed in GUI window")
+            else:
+                # In console mode, display ASCII board
+                self.game_view.display_board(ascii)
+        else:
+            self.console_view.display_error("No board data received")
         
     def _handle_game_over(self, response: dict):
         """Handle game over"""
         result = response.get('result', 'Unknown')
+        reason = response.get('reason', '')
+        
         self.context.on_game_over()
-        self.view.display_game_over(result)
+        
+        # Display using both views
+        self.game_view.display_game_over(result)
+        if reason:
+            self.console_view.display_info(f"Reason: {reason}")
     
     def _handle_game_reset(self, response: dict):
         """Handle game reset"""
         self.context.on_reset()
         self.model.reset()
-        self.view.display_info("Game has been reset")
+        self.console_view.display_info("Game has been reset")
         
         self._refresh_menu()
         
     def _handle_error(self, response: dict):
         """Handle error"""
         error = response.get('error', 'Unknown error')
-        self.view.display_error(error)
+        self.console_view.display_error(error)
 
     def _refresh_menu(self):
         print()

@@ -1,13 +1,14 @@
 import socket
-from pathlib import Path
 from typing import Optional
 from controllers.game_controller import GameController
 from controllers.response_router import ResponseRouter
-from network.network_mode import NetworkMode
+from network.transport.transport_interface import TransportMode
 from network.transport.transport_factory import TransportFactory
 from network.session.client_session import ClientSession
 from utils.logger import Logger
-
+from views.shared_console_view import SharedConsoleView
+from views.view_factory import ViewMode
+from views.view_interface import IView
 
 class Client:
     """
@@ -15,21 +16,27 @@ class Client:
     """
 
     def __init__(
-        self, 
-        mode: NetworkMode, 
+        self,
+        transport_mode: TransportMode, 
+        view_mode: ViewMode, 
         host: str = "localhost",
         port: int = 2000,
         socket_path: str = "/tmp/chess_server.sock",
-        game_file: Optional[str] = None
+        game_file: Optional[str] = None,
+        game_view: IView = None,
+        console_view: SharedConsoleView = None,
     ):
 
-        self.mode = mode
+        self.transport_mode = transport_mode
+        self.view_mode = view_mode
         self.host = host
         self.port = port
         self.socket_path = socket_path
         self.game_file = game_file
+        self.game_view = game_view
+        self.console_view = console_view
         
-        self.logger_ = Logger()
+        self.logger_= Logger()
         self.socket: Optional[socket.socket] = None
         self.session: Optional[ClientSession] = None
         self.controller: Optional[GameController] = None
@@ -41,7 +48,7 @@ class Client:
 
         @param file_name The game file to use (if any).
         """
-        if self.mode == NetworkMode.IPC:
+        if self.transport_mode == TransportMode.IPC:
             self.logger_.info(f"Connecting to Unix socket: {self.socket_path}")
         else:
             self.logger_.info(f"Connecting to {self.host}:{self.port}")
@@ -52,10 +59,10 @@ class Client:
         
         # Create transport
         fd = self.socket.fileno()
-        transport = TransportFactory.create(fd, self.mode)
+        transport = TransportFactory.create(fd, self.transport_mode)
 
-        self.controller = GameController()
-        self.router = ResponseRouter(self.controller)
+        self.controller = GameController(self.game_view, self.console_view)
+        self.router = ResponseRouter(self.controller, self.view_mode)
 
         self.session = ClientSession(
             transport=transport,
@@ -67,7 +74,7 @@ class Client:
         # Start session to begin receive loop
         self.session.start()
         
-        self.logger_.info(f"Client started on {self.mode.value}")
+        self.logger_.info(f"Client started on {self.transport_mode.value}")
 
         # Run appropriate mode based on file
         if self.game_file and self.game_file.strip() != "":
@@ -84,9 +91,9 @@ class Client:
         try:
             self.logger_.info(f"Connecting to {self.host}:{self.port}...")
 
-            if self.mode == NetworkMode.IPC:
+            if self.transport_mode == TransportMode.IPC:
                 self.socket = self._connect_ipc()
-            else:  # NetworkMode.TCP
+            else:  # TransportMode.TCP
                 self.socket = self._connect_tcp()
 
             if not self.socket:
@@ -141,5 +148,5 @@ class Client:
                     pass
                 self.socket = None
 
-        conn_type = "Unix socket" if self.mode == NetworkMode.IPC else "TCP"
+        conn_type = "Unix socket" if self.transport_mode == TransportMode.IPC else "TCP"
         self.logger_.info(f"Client stopped ({conn_type})")

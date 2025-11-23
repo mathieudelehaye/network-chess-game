@@ -5,8 +5,11 @@ import argparse
 import sys
 from pathlib import Path
 from network.client import Client
-from network.network_mode import NetworkMode
+from network.transport.transport_interface import TransportMode
 from utils.logger import Logger
+from views.view_factory import ViewFactory, ViewMode
+from views.shared_console_view import SharedConsoleView
+
 
 def parse_arguments():
     """Parse command-line arguments."""
@@ -15,12 +18,20 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  chess_client.py # Interactive multiplayer
-  mode 
-  chess_client.py -f ./test/game/game_01 # Play from file
-  (single-player) 
-  chess_client.py -i 192.168.1.100 -p 3000 # Custom server
-  chess_client.py -v -f ./test/game/game_01 # Verbose mode
+  # Console mode (default)
+  chess_client.py                              # Interactive multiplayer
+  chess_client.py -f ./test/game/game_01       # Play from file
+  chess_client.py -i 192.168.1.100 -p 3000     # Custom server
+  chess_client.py -v -f ./test/game/game_01    # Verbose mode
+  
+  # GUI mode
+  chess_client.py -g                           # Interactive with GUI board
+  chess_client.py -g -f ./test/game/game_01    # GUI with file playback
+  chess_client.py -g -l                        # GUI with Unix socket
+  
+  # Local IPC
+  chess_client.py -l                           # Unix socket mode
+  chess_client.py -l -s /tmp/custom.sock       # Custom socket path
         """
     )
     
@@ -61,6 +72,12 @@ Examples:
         default=None,
         help="Game file to play (non-interactive mode)"
     )
+
+    parser.add_argument(
+        "-g", "--gui",
+        action="store_true",
+        help="Use graphical user interface instead of console"
+    )
     
     return parser.parse_args()
 
@@ -76,45 +93,70 @@ def main():
     
     try:
         # Determine connection mode
-        mode = NetworkMode.IPC if args.local else NetworkMode.TCP
+        transport_mode = TransportMode.IPC if args.local else TransportMode.TCP
 
-        if mode == NetworkMode.IPC:
+        if transport_mode == TransportMode.IPC:
             logger.info(f"Starting chess client (Unix socket: {args.socket})...")
         else:
             logger.info(f"Starting chess client (TCP: {args.ip}:{args.port})...")
+            
+        # Determine view mode and create views
+        view_mode = ViewMode.GUI if args.gui else ViewMode.NOGUI
+        
+        # Create game view (GUI or NoGUI console)
+        game_view = ViewFactory.create(view_mode)
+        
+        # Create shared console view (always needed for menus/messages)
+        console_view = SharedConsoleView()
+        
+        if view_mode == ViewMode.GUI:
+            logger.info("GUI mode enabled for board display")
+        else:
+            logger.info("Console mode for all display")
 
+        # Create and start client
         client = Client(
-            mode=mode,
+            transport_mode=transport_mode,
+            view_mode=view_mode,
             host=args.ip,
             port=args.port,
             socket_path=args.socket,
-            game_file=args.file
+            game_file=args.file,
+            game_view=game_view,
+            console_view=console_view
         )
         
         client.start()
         
-        print("Press Enter to exit...")
-        input()  # Wait for user to press any key
-        
-        logger.info("Stopping client...")
-        client.stop()
+        logger.info("Client finished")
     
     except KeyboardInterrupt:
         logger.info("\nReceived interrupt signal - shutting down...")
-        # Gracefully close
-        if 'client' in locals():
-            client.stop()
-        logger.info("Client shut down gracefully")
         return 0
         
     except RuntimeError as e:
         logger.critical(f"Client initialisation failed: {e}")
         return 1
+        
     except Exception as e:
         logger.critical(f"Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
         return 2
     
+    finally:
+        # Cleanup resources
+        if client:
+            logger.info("Stopping client...")
+            client.stop()
+        
+        if game_view:
+            game_view.cleanup()
+        
+        logger.info("Client shut down gracefully")
+    
     return 0
+
 
 
 if __name__ == "__main__":

@@ -1,18 +1,22 @@
 """
-View layer for displaying game information to the user.
+View layer for displaying game information to the user, which is shared between
+the GUI and non-GUI (i.e. console substitute for GUI) views. Some functions
+might stay in console mode anyway, although the amount of these could decrease
+in the future. 
 """
 
 from utils.logger import Logger
 
-class ConsoleView:
+
+class SharedConsoleView:
     """
-    Handles all user-facing output.
-    Separates presentation logic from business logic.
+    Console text-based view.
+    Also contains all shared menu/input methods.
     """
 
     def __init__(self):
         self.logger_ = Logger()
-
+        
     def display_menu(self, info: dict):
         """Display main menu based on game state"""
         print("\n" + "="*60)
@@ -96,95 +100,21 @@ class ConsoleView:
         
         print("="*60)
 
-    def wait_for_input(self, info: dict) -> tuple[str, ...]:
-        """Display prompt and wait for user input based on game state"""
-        
-        state_name = info.get('state_name', 'Unknown')
-        player_number = info.get('player_number', 1)
-        
-        if state_name == "PLAYING":
-            return self.get_game_input(player_number == 1)
-        else:
-            return (self.get_user_choice())
-    
-    def get_game_input(self, single_player: bool) -> tuple[str, ...]:
-        """Get move from user (e.g., 'e2-e4'). Special commands
-        are also allowed, including:
-          - `:r                 => restart (only in single player mode)
-          - `:f <file name>`    => upload game file (only in single player mode)
-          - `:d`                => display board
-          - `:q`                => quit the game
-        """
-        command = input("Enter move (or special command): ").strip()
-
-        # Handle empty input
-        if not command:
-            return (None, None)
-        
-        # Handle special commands
-        if command[0] == ':':
-            if len(command) < 2:
-                self.display_error("Invalid command")
-                return (None, None)
-        
-            if single_player:
-                if command[1] == 'r':
-                    return ('r', None)
-                if command[1] == 'f':
-                    pos = command[2:].find(' ')
-                    if pos == -1:
-                        self.display_error("Invalid file command. Usage: :f <file name>")
-                        return (None, None)
-                    file_path = command[2 + pos:].strip()
-                    return ('f', file_path)
-            
-            if command[1] == 'd':
-                return ('d', None)
-            
-            if command[1] == 'q':
-                return ('q', None)
-            
-        # Handle regular move
-        if '-' in command:
-            return ('m', command)
-        
-        self.display_error("Invalid input format")
-        return (None, None)
-    
-    def get_user_choice(self) -> str:
-        """Get user menu choice"""
-        return input("\nEnter choice: ").strip()
-    
-    def display_board(self, board: str) -> None:
-        """Display chess board"""
-        print("\n" + "="*50)
-        print("Current Board:")
-        print("="*50)
-        print(board)
-        print("="*50 + "\n")
-
-    def display_game_over(self, result: str) -> None:
-        """Display game over message"""
-        print("\n" + "="*60)
-        print(f"GAME OVER: {result.upper()}")
-        print("="*60 + "\n")
-        self.logger_.info(f"Game Over: {result}")
-    
-    def display_success(self, message: str) -> None:
-        """Display success message"""
+    def display_info(self, message: str) -> None:
+        """Display info message"""
         self.logger_.info(message)
+
+    def display_warning(self, message: str) -> None:
+        """Display warning message"""
+        self.logger_.warning(message)
     
     def display_error(self, error: str) -> None:
         """Display error message"""
         self.logger_.error(error)
     
-    def display_info(self, message: str) -> None:
-        """Display informational message"""
+    def display_success(self, message: str) -> None:
+        """Display success message"""
         self.logger_.info(message)
-    
-    def display_warning(self, message: str) -> None:
-        """Display warning message"""
-        self.logger_.warning(message)
     
     def display_connected(self, session_id: str) -> None:
         """Display connection success"""
@@ -194,3 +124,7 @@ class ConsoleView:
         """Ask user to confirm an action"""
         response = input(f"{message} (yes/no): ").strip().lower()
         return response in ['yes', 'y']
+    
+    def wait_for_user_choice(self) -> str:
+        """Get user menu choice"""
+        return input("\nEnter choice: ").strip()
