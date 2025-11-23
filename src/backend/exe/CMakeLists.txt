@@ -59,6 +59,7 @@ target_include_directories(${EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/network/session
     ${CMAKE_CURRENT_SOURCE_DIR}/network/transport
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/transport/ipc
     ${CMAKE_CURRENT_SOURCE_DIR}/network/transport/tcp
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
 )

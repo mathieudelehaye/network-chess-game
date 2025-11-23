@@ -10,13 +10,15 @@ from utils.logger import Logger
 class TcpTransport(ITransport):
     """Class for TCP transport"""
 
-    def __init__(self, socket_fd: int):
+    def __init__(self, host: str, port: int):
         """
         Construct a TCP transport with an existing socket.
 
         @param socket_fd The file descriptor of the connected socket.
         """
-        self.fd = socket_fd
+        self.host = host,
+        self.port = port,
+        self.fd = -1
         self.running = False
         self.reader_thread: Optional[threading.Thread] = None
         self.logger_ = Logger()
@@ -25,19 +27,47 @@ class TcpTransport(ITransport):
         """Destructor ensures that the socket is closed."""
         self.close()
 
+    def connect(self) -> bool:
+        """
+        Connect to the server via TCP.
+        
+        @return True if connection successful, False otherwise
+        """
+        try:
+            # Create TCP socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((self.host, self.port))
+            
+            # Get file descriptor
+            self.fd = sock.fileno()
+            
+            # Detach the socket so it won't be closed when sock goes out of scope
+            sock.detach()
+            
+            self.logger_.info(f"Connected to {self.host}:{self.port} via TCP")
+            return True
+            
+        except Exception as e:
+            self.logger_.error(f"TCP connection failed: {e}")
+            return False
+
     def start(self, on_receive: Callable[[str], None]) -> None:
         """
         Start receiving data on the transport.
 
         @param on_receive Callback function to handle received data.
         """
+        if self.fd < 0:
+            self.logger_.error("Cannot start: not connected")
+            return
+        
         self.running = True
 
         def reader_loop():
             while self.running:
                 try:
-                    # Read from socket (max 1024 bytes like on backend)
-                    data = os.read(self.fd, 1024)
+                    # Read from socket (max 4096 bytes)
+                    data = os.read(self.fd, 4096)
 
                     # Connection closed or broken
                     if len(data) == 0:

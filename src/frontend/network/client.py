@@ -17,15 +17,16 @@ class Client:
     def __init__(
         self, 
         mode: NetworkMode, 
-        host: str, 
-        port: int, 
+        host: str = "localhost",
+        port: int = 2000,
+        socket_path: str = "/tmp/chess_server.sock",
         game_file: Optional[str] = None
-        ):
+    ):
 
         self.mode = mode
         self.host = host
         self.port = port
-        self.port = port
+        self.socket_path = socket_path
         self.game_file = game_file
         
         self.logger_ = Logger()
@@ -40,7 +41,10 @@ class Client:
 
         @param file_name The game file to use (if any).
         """
-        self.logger_.info(f"Connecting to {self.port}:{self.port}")
+        if self.mode == NetworkMode.IPC:
+            self.logger_.info(f"Connecting to Unix socket: {self.socket_path}")
+        else:
+            self.logger_.info(f"Connecting to {self.host}:{self.port}")
         
         # Connect (create socket)
         if not self._connect():
@@ -108,8 +112,14 @@ class Client:
 
     def _connect_ipc(self) -> Optional[socket.socket]:
         """Create Unix domain socket and connect"""
-        self.logger_.error("IPC mode not yet implemented")
-        return None
+        try:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.connect(self.socket_path)
+            self.logger_.info(f"Unix socket connected: {self.socket_path} (fd={sock.fileno()})")
+            return sock
+        except OSError as e:
+            self.logger_.error(f"Unix socket connection failed: {e}")
+            return None
 
     def stop(self):
         """
@@ -131,4 +141,5 @@ class Client:
                     pass
                 self.socket = None
 
-        self.logger_.info("Client stopped")
+        conn_type = "Unix socket" if self.mode == NetworkMode.IPC else "TCP"
+        self.logger_.info(f"Client stopped ({conn_type})")

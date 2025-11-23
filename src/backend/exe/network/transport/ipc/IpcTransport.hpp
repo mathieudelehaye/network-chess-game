@@ -6,27 +6,22 @@
 #include "ITransport.hpp"
 
 /**
- * @class TcpTransport
- * @brief Concrete transport implementation using POSIX TCP/IP sockets
- *
- * This class implements the ITransport interface using a standard
- * POSIX TCP/IP socket. It provides a bidirectional text-based
- * communication channel used by the server to exchange messages with
- * remote clients (console frontend, GUI, etc.).
+ * @class IpcTransport
+ * @brief Concrete transport implementation using POSIX Unix domain sockets
  */
-class TcpTransport : public ITransport {
+class IpcTransport : public ITransport {
    public:
     /**
-     * @brief Construct a transport from an already-accepted socket descriptor.
+     * @brief Construct a transport from an already-accepted Unix socket descriptor.
      *
-     * @param socket_fd File descriptor representing an open TCP connection.
+     * @param socket_fd File descriptor representing an open Unix domain socket connection.
      */
-    TcpTransport(int socket_fd);
+    IpcTransport(int socket_fd);
 
     /**
      * @brief Destructor closes the socket and stops background threads.
      */
-    ~TcpTransport();
+    ~IpcTransport();
 
     /**
      * @brief Starts the asynchronous reading loop.
@@ -52,7 +47,7 @@ class TcpTransport : public ITransport {
      *
      * This method:
      * - Stops the background reading thread.
-     * - Shuts down the TCP connection.
+     * - Shuts down the Unix socket connection.
      * - Closes the underlying socket file descriptor.
      *
      * After this call, the session and upper layers must treat the connection as
@@ -61,16 +56,21 @@ class TcpTransport : public ITransport {
     void close() override;
 
     /**
+     * @brief Sets callback to be invoked when connection closes unexpectedly.
+     *
+     * @param onClose Callback function to handle connection closure.
+     */
+    void setCloseCallback(CloseCallback onClose) override;
+
+    /**
      * @brief Implements the connect() method from ITransport.
      * Since the socket is already connected, this simply returns true.
      */
     bool connect() override;
 
-    void setCloseCallback(CloseCallback onClose) override;
-
    private:
-    int fd;                            ///< Underlying POSIX socket descriptor.
+    int fd;                            ///< Underlying POSIX Unix socket descriptor.
     std::jthread readerThread;         ///< Background thread reading the socket.
     std::atomic<bool> running{false};  ///< Indicates whether the read loop is active.
-    CloseCallback closeCallback_;
+    CloseCallback closeCallback_;      ///< Callback invoked on unexpected closure.
 };

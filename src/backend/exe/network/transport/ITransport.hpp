@@ -25,10 +25,23 @@ class ITransport {
      */
     using ReceiveCallback = std::function<void(const std::string&)>;
 
+    /**
+     * @brief Function type called when the transport closes unexpectedly.
+     */
     using CloseCallback = std::function<void()>;
 
     /// Virtual destructor
     virtual ~ITransport() = default;
+
+    /**
+     * @brief Connect to the server/client.
+     *
+     * For client transports, this establishes the connection to the server.
+     * For server transports, this is typically called after accept().
+     *
+     * @return True if connection successful, False otherwise
+     */
+    virtual bool connect() = 0;
 
     /**
      * @brief Starts the transport input loop.

@@ -37,6 +37,18 @@ Examples:
     )
     
     parser.add_argument(
+        "-s", "--socket",
+        default="/tmp/chess_server.sock",
+        help="Unix socket path (default: /tmp/chess_server.sock)"
+    )
+    
+    parser.add_argument(
+        "-l", "--local",
+        action="store_true",
+        help="Use Unix domain socket for local IPC instead of TCP"
+    )
+    
+    parser.add_argument(
         "-p", "--port",
         type=int,
         default=2000,
@@ -63,12 +75,19 @@ def main():
         logger.set_level("DEBUG")
     
     try:
-        logger.info("Starting chess client...")
-        
+        # Determine connection mode
+        mode = NetworkMode.IPC if args.local else NetworkMode.TCP
+
+        if mode == NetworkMode.IPC:
+            logger.info(f"Starting chess client (Unix socket: {args.socket})...")
+        else:
+            logger.info(f"Starting chess client (TCP: {args.ip}:{args.port})...")
+
         client = Client(
-            mode=NetworkMode.TCP,
+            mode=mode,
             host=args.ip,
             port=args.port,
+            socket_path=args.socket,
             game_file=args.file
         )
         

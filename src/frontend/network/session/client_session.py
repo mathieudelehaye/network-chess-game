@@ -1,8 +1,10 @@
 import json
+import socket
 import threading
+from typing import Optional, Callable
+from controllers.response_router import ResponseRouter
 from network.transport.transport_interface import ITransport
 from utils.logger import Logger
-from controllers.response_router import ResponseRouter
 
 class ClientSession:
     """
@@ -11,9 +13,13 @@ class ClientSession:
     """
 
     def __init__(
-        self, 
-        transport: ITransport, 
-        router: ResponseRouter):
+        self,
+        transport: ITransport,
+        router: ResponseRouter,
+        _socket: Optional[socket.socket] = None,
+        _running: bool = False,
+        _receive_thread: Optional[threading.Thread] = None,
+        _message_handler: Optional[Callable] = None):
         """
         Construct a client session.
 

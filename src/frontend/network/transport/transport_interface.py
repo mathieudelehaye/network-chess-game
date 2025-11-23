@@ -1,8 +1,18 @@
 from abc import ABC, abstractmethod
+from typing import Callable
 
 
 class ITransport(ABC):
     """Transport layer interface (Strategy pattern)"""
+    
+    @abstractmethod
+    def connect(self) -> bool:
+        """
+        Connect to the server.
+        
+        @return True if connection successful, False otherwise
+        """
+        pass
 
     @abstractmethod
     def start(self, host: str, port: int) -> bool:

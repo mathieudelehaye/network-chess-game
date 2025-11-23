@@ -1,7 +1,10 @@
 #include "Server.hpp"
 
 #include <arpa/inet.h>
+#include <cstring>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 #include <iostream>
@@ -12,19 +15,10 @@
 
 using json = nlohmann::json;
 
-Server::Server(NetworkMode mode, const std::string& ip, int port)
-    : network(mode), shared_controller_(std::make_shared<GameController>()) {
-    // Create socket based on transport mode
-    switch (network) {
-        case NetworkMode::IPC:
-            connectIPC();
-            break;
-        case NetworkMode::TCP:
-        default:
-            // Select TCP by default
-            connectTCP(ip, port);
-            break;
-    }
+Server::Server(NetworkMode mode, int port) : 
+    network(mode), 
+    port(port), 
+    shared_controller_(std::make_shared<GameController>()) {
 
     setupSendCallbacks();
 }
@@ -33,7 +27,6 @@ void Server::setupSendCallbacks() {
     shared_controller_->setSendCallbacks(
         [this](const std::string& session_id, const json& msg) {
             auto& logger = Logger::instance();
-
             std::string message = msg.dump();
             logger.trace("Unicast callback called with message: " + message);
 
@@ -41,7 +34,6 @@ void Server::setupSendCallbacks() {
         },
         [this](const std::string& originating_session_id, const json& msg, bool to_all) {
             auto& logger = Logger::instance();
-
             std::string message = msg.dump();
             logger.trace("Broadcast callback called with message: `" + message + "` sent to " +
                          (to_all ? "all" : ("others than " + originating_session_id)));
@@ -54,9 +46,29 @@ void Server::setupSendCallbacks() {
         });
 }
 
-void Server::start() {
+void Server::start(const std::string& ip) {
     running = true;
+    
+    auto& logger = Logger::instance();
 
+    connectTCP(ip, port);
+    logger.info("Server started on TCP " + ip + ":" + std::to_string(port));
+
+    start_threads();
+}
+
+void Server::start_unix(const std::string& socket_path) {
+    running = true;
+    
+    auto& logger = Logger::instance();
+    
+    connectIPC(socket_path);
+    logger.info("Server started on Unix socket: " + socket_path);
+
+    start_threads();
+}
+
+void Server::start_threads() {
     // Start accept thread
     acceptThread = std::jthread([this](std::stop_token st) { acceptLoop(st); });
 
@@ -85,6 +97,11 @@ void Server::stop() {
         close(server_fd);
         server_fd = -1;
     }
+    
+    // Clean up Unix socket file if it exists
+    if (network == NetworkMode::IPC && !unix_socket_path_.empty()) {
+        unlink(unix_socket_path_.c_str());
+    }
 }
 
 void Server::acceptLoop(std::stop_token st) {
@@ -94,10 +111,14 @@ void Server::acceptLoop(std::stop_token st) {
         int client_fd = accept(server_fd, nullptr, nullptr);
 
         if (client_fd < 0) {
+            if (errno == EINTR) {
+                continue;  // Interrupted by signal, retry
+            }
+            logger.error("Accept failed: " + std::string(strerror(errno)));
             continue;
         }
 
-        logger.debug("Client connected");
+        logger.debug("Client connected on fd " + std::to_string(client_fd));
 
         // Create   a unique transport layer for this session
         auto transport = TransportFactory::create(client_fd, network);
@@ -145,8 +166,50 @@ void Server::connectTCP(const std::string& ip, int port) {
         throw std::runtime_error("TCP listen failed");
 }
 
-void Server::connectIPC() {
-    // TODO: implement
+void Server::connectIPC(const std::string& socket_path) {
+    auto& logger = Logger::instance();
+    
+    // Remove existing socket file if it exists
+    unlink(socket_path.c_str());
+    
+    server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        throw std::runtime_error("Cannot create Unix socket: " + std::string(strerror(errno)));
+    }
+    
+    sockaddr_un addr{};
+    addr.sun_family = AF_UNIX;
+    
+    // Check path length
+    if (socket_path.length() >= sizeof(addr.sun_path)) {
+        close(server_fd);
+        throw std::runtime_error("Socket path too long: " + socket_path);
+    }
+    
+    strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
+    
+    if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(server_fd);
+        throw std::runtime_error("Unix socket bind failed: " + std::string(strerror(errno)));
+    }
+    
+    // Set socket permissions (0666 = rw-rw-rw-)
+    if (chmod(socket_path.c_str(), 0666) < 0) {
+        close(server_fd);
+        unlink(socket_path.c_str());
+        throw std::runtime_error("Failed to set socket permissions: " + std::string(strerror(errno)));
+    }
+    
+    if (listen(server_fd, 10) < 0) {
+        close(server_fd);
+        unlink(socket_path.c_str());
+        throw std::runtime_error("Unix socket listen failed: " + std::string(strerror(errno)));
+    }
+    
+    // Store socket path for cleanup
+    unix_socket_path_ = socket_path;
+    
+    logger.info("Unix socket listening on " + socket_path);
 }
 
 void Server::broadcastToAll(const std::string& message) {
