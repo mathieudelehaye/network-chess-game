@@ -1,39 +1,10 @@
 # Set executable name
 set(EXE_NAME chess_server)
 
-# Path to cmake scripts
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-
-# Include Doxygen setup
 include(SetupDoxygen)
-
-# Include ANTLR setup
-# 
-# TODO: use an external dependency manager like vcpkg,
-# so cmake build dir can be deleted without 
-# downloading the ANTLR tool again.
-# But it requires more work: https://shybovycha.github.io/2022/11/07/configscript-parser.html#:~:text=ANTLR%20version%20incompatibility
-# 
-include(SetupANTLR)
-
-# Generate parser from grammar
-antlr_target(SimpleChessGameParser 
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/SimpleNotation/SimpleChessGame.g4
-    PACKAGE chess
-    VISITOR
-)
-
-antlr_target(PGNGameParser 
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/PGN/PGN.g4
-    PACKAGE chess
-    VISITOR
-)
-
-# Setup chess-library
 include(SetupChessLibrary)
 
 # Find vcpkg dependency packages
-find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 # Automatically find source files
@@ -44,30 +15,13 @@ file(GLOB_RECURSE EXE_SOURCES CONFIGURE_DEPENDS
 # Add executable to build
 add_executable(${EXE_NAME} 
     ${EXE_SOURCES}
-    ${ANTLR_SimpleChessGameParser_CXX_OUTPUTS}
-    ${ANTLR_PGNGameParser_CXX_OUTPUTS}
 )
-
-# Include dependency headers - use SYSTEM to suppress warnings
-target_include_directories(${EXE_NAME} SYSTEM PRIVATE 
-    "${ANTLR_SOURCE_DIR}/runtime/Cpp/runtime/src"
-)
-
-message(STATUS "ANTLR PGN output directory: ${ANTLR_PGNGameParser_OUTPUT_DIR}")
 
 # Include project headers
 target_include_directories(${EXE_NAME} PRIVATE
-    ${ANTLR_SimpleChessGameParser_OUTPUT_DIR}
-    ${ANTLR_PGNGameParser_OUTPUT_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}        
     ${CMAKE_CURRENT_SOURCE_DIR}/controllers
     ${CMAKE_CURRENT_SOURCE_DIR}/models
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/PGN
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/SimpleNotation
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/game
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/game/state
-    ${CMAKE_CURRENT_SOURCE_DIR}/views
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/network/session
     ${CMAKE_CURRENT_SOURCE_DIR}/network/transport
@@ -78,10 +32,10 @@ target_include_directories(${EXE_NAME} PRIVATE
 
 # Link libraries
 target_link_libraries(${EXE_NAME} PRIVATE 
-    antlr4_shared
     spdlog::spdlog
     nlohmann_json::nlohmann_json
     chess-library::chess-library
+    chess_parser   # Our parser library module
 )
 
 # Set optimization flags for Release build

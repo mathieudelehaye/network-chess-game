@@ -17,29 +17,7 @@ sudo apt install doxygen graphviz
 cd ~
 git clone https://github.com/microsoft/vcpkg.git
 ./vcpkg/bootstrap-vcpkg.sh
-./vcpkg/vcpkg install spdlog nlohmann-json
-```
-
-- To build and run the backend server:
-```
-cd /path/to/project/root
-
-rm -rf build/backend/debug
-
-cmake \
-  -S src/backend \
-  -B build/backend/debug \
-  -G "Ninja" \
-  -DCMAKE_BUILD_TYPE=Debug 
-
-cmake --build build/backend/debug -j$(nproc)
-
-./bin/backend/chess_server
-```
-
-- To generate the documentation (not auto-generated on every build):
-```
-cmake --build build/backend/debug/ --target docs
+./vcpkg/vcpkg install spdlog nlohmann-json gtest
 ```
 
 Cmake script should automatically download the chess-library (https://github.com/Disservin/chess-library). If needed to download it manually in the download cache folder:
