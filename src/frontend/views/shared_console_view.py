@@ -6,6 +6,7 @@ in the future.
 """
 
 from utils.logger import Logger
+from utils.timer import format_timestamp
 
 
 class SharedConsoleView:
@@ -110,6 +111,20 @@ class SharedConsoleView:
     def display_info(self, message: str) -> None:
         """Display info message"""
         self.logger_.info(message)
+
+    def display_info_with_timestamp(self, message: str, timestamp: int) -> None:
+        """
+        Create a log entry for a move with timestamp.
+        
+        Args:
+            strike: Dictionary containing move/strike information
+            timestamp: Seconds elapsed since game start
+            
+        Returns:
+            Formatted log entry string
+        """
+        time_str = format_timestamp(timestamp)
+        self.logger_.info(f"{time_str}: {message}")
 
     def display_warning(self, message: str) -> None:
         """Display warning message"""

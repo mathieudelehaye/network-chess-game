@@ -153,11 +153,16 @@ class ResponseRouter:
         """Handle move result - display board and move info"""
         strike = response.get("strike", {})
         board = response.get("board", "")
+        timestamp = response.get("timestamp", None)
         
         # Build move description
         description = self.model.build_move_description(strike)
         suffix = self.model.build_strike_suffix(strike)
-        self.console_view.display_info(description + suffix)
+
+        if timestamp:
+            self.console_view.display_info_with_timestamp(description + suffix, int(timestamp))
+        else: 
+            self.console_view.display_info(description + suffix)
         
         # Update turn
         strike_number = strike.get("strike_number")

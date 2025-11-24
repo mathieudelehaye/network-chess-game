@@ -33,6 +33,22 @@ void GameContext::broadcastToOthers(const std::string& session_id, const std::st
     }
 }
 
+void GameContext::startGameTimer() {
+    game_start_time_ = std::chrono::steady_clock::now();
+    timer_started_ = true;
+    Logger::instance().debug("Game timer started");
+}
+
+int GameContext::getElapsedSeconds() const {
+    if (!timer_started_) {
+        return 0;
+    }
+    
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - game_start_time_);
+    return static_cast<int>(elapsed.count());
+}
+
 json GameContext::resetGame(const std::string& player_id) {
     auto& logger = Logger::instance();
     logger.info("Game reset requested by: " + (player_id.empty() ? "system" : player_id));
@@ -63,6 +79,9 @@ json GameContext::resetGame(const std::string& player_id) {
                                {"white_player", getWhitePlayer()},
                                {"black_player", getBlackPlayer()}};
     broadcastToOthers(player_id, game_end_broadcast.dump());
+
+    // Reset timer
+    timer_started_ = false;
 
     return end_response;
 }

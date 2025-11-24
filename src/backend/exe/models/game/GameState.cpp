@@ -85,6 +85,10 @@ json ReadyToStartState::handleStartRequest(GameContext* context, const std::stri
     // Initialise chess game
     auto* game = context->getChessGame();
     game->reset();
+
+    // Start the game timer
+    context->startGameTimer();
+    
     logger.info("Game started");
     
     // Get initial board state
@@ -135,11 +139,15 @@ json InProgressState::handleMoveRequest(
 
     // Get FEN representation
     std::string fen = game->getFEN();
+    
+    // Get elapsed time since game started
+    int elapsed_seconds = context->getElapsedSeconds();
 
     // Build response
     json response;
     response["type"] = "move_result";
     response["success"] = true;
+    response["timestamp"] = elapsed_seconds;
     response["strike"] = {
         {"case_src", strike_data->case_src},
         {"case_dest", strike_data->case_dest},

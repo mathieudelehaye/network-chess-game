@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <chrono>
 
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
@@ -30,6 +31,10 @@ class GameContext {
     void broadcastToOthers(const std::string& session_id, const std::string& message);
 
     json resetGame(const std::string& player_id);
+
+    // Timer methods
+    void startGameTimer();
+    int getElapsedSeconds() const;
 
     // State transition (used by states to transition themselves)
     void transitionTo(std::unique_ptr<IGameState> state);
@@ -70,4 +75,7 @@ class GameContext {
     std::string white_player_id_;
     std::string black_player_id_;
     mutable std::mutex mutex_;
+    
+    std::chrono::steady_clock::time_point game_start_time_;
+    bool timer_started_ = false;
 };
