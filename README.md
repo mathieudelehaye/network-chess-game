@@ -6,6 +6,8 @@ Technical interview for Sucden Financial
 
 # Build and run
 
+## Backend
+
 - To build and run the backend server:
 ```
 cd /path/to/project/root
@@ -22,12 +24,35 @@ cmake \
 
 cmake --build build/backend/debug -j$(nproc)
 
-ctest --test-dir build/backend/debug/test --output-on-failure
-
+# Run server
 ./bin/backend/chess_server
+
+# Run unit tests
+ctest --test-dir build/backend/debug/test --output-on-failure
 ```
 
 - To generate the documentation (not auto-generated on every build):
 ```
 cmake --build build/backend/debug/ --target docs
+```
+
+## Frontend
+
+```
+cd /path/to/project/root/src/frontend
+
+env="/path/to/project/root/.venv"
+uv venv $env --python python3.11
+source "$env/bin/activate"
+python --version && which python
+
+uv pip install -r requirements.txt
+
+# Run client instance
+python -m chess_client
+
+# Run unit tests
+pytest test/network/test_tcp_transport.py -v
+
+deactivate
 ```
