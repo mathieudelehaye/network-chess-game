@@ -18,7 +18,7 @@ class GameController:
     
     def __init__(self, view_mode: ViewMode, game_view: IView, console_view: SharedConsoleView):
         """
-        Initialize controller with two view objects.
+        Initialise controller with two view objects.
         
         @param game_view View for game display (NoGUIConsoleView or GuiView)
         @param console_view Shared console view for common I/O operations

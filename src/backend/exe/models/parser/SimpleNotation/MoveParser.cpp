@@ -9,7 +9,7 @@
 using namespace antlr4;
 using namespace chess;
 
-std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
+std::optional<SimpleNotationParsedMove> MoveParser::parse(const std::string& move) {
     auto& logger = Logger::instance();
 
     if (move.empty()) {
@@ -54,7 +54,7 @@ std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
         // Get first (and should be only) move
         const auto& [from, to] = moves[0];
 
-        return ParsedMove(from, to);
+        return SimpleNotationParsedMove(from, to);
 
     } catch (const std::exception& e) {
         logger.error("Parser exception: " + std::string(e.what()));
@@ -62,9 +62,9 @@ std::optional<ParsedMove> MoveParser::parse(const std::string& move) {
     }
 }
 
-std::vector<ParsedMove> MoveParser::parseGame(const std::string& game_content) {
+std::vector<SimpleNotationParsedMove> MoveParser::parseGame(const std::string& game_content) {
     auto& logger = Logger::instance();
-    std::vector<ParsedMove> moves;
+    std::vector<SimpleNotationParsedMove> moves;
 
     try {
         // Parse entire game with ANTLR

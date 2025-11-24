@@ -18,7 +18,13 @@ include(SetupANTLR)
 
 # Generate parser from grammar
 antlr_target(SimpleChessGameParser 
-    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/SimpleChessGame.g4
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/SimpleNotation/SimpleChessGame.g4
+    PACKAGE chess
+    VISITOR
+)
+
+antlr_target(PGNGameParser 
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/PGN/PGN.g4
     PACKAGE chess
     VISITOR
 )
@@ -39,6 +45,7 @@ file(GLOB_RECURSE EXE_SOURCES CONFIGURE_DEPENDS
 add_executable(${EXE_NAME} 
     ${EXE_SOURCES}
     ${ANTLR_SimpleChessGameParser_CXX_OUTPUTS}
+    ${ANTLR_PGNGameParser_CXX_OUTPUTS}
 )
 
 # Include dependency headers - use SYSTEM to suppress warnings
@@ -46,13 +53,18 @@ target_include_directories(${EXE_NAME} SYSTEM PRIVATE
     "${ANTLR_SOURCE_DIR}/runtime/Cpp/runtime/src"
 )
 
+message(STATUS "ANTLR PGN output directory: ${ANTLR_PGNGameParser_OUTPUT_DIR}")
+
 # Include project headers
 target_include_directories(${EXE_NAME} PRIVATE
     ${ANTLR_SimpleChessGameParser_OUTPUT_DIR}
+    ${ANTLR_PGNGameParser_OUTPUT_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}        
     ${CMAKE_CURRENT_SOURCE_DIR}/controllers
     ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${CMAKE_CURRENT_SOURCE_DIR}/models/parser
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/PGN
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/parser/SimpleNotation
     ${CMAKE_CURRENT_SOURCE_DIR}/models/game
     ${CMAKE_CURRENT_SOURCE_DIR}/models/game/state
     ${CMAKE_CURRENT_SOURCE_DIR}/views

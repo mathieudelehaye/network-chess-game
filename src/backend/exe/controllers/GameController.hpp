@@ -25,7 +25,7 @@ struct FileUploadState {
 
 class GameController {
    public:
-    GameController();
+    GameController(ParserType parser);
     ~GameController() = default;
 
     /**
@@ -73,12 +73,10 @@ class GameController {
     /**
      * @brief Handle parsed move
      * @param session_id Client session ID
-     * @param from Starting square (e.g., "e2")
-     * @param to Target square (e.g., "e4")
+     * @param move Parsed move either in simple or SAN notation
      * @return JSON response
      */
-    std::string handleParsedMove(const std::string& session_id, const std::string& from,
-                                 const std::string& to);
+    std::string handleParsedMove(const std::string& session_id, const ParsedMove& move);
 
     /**
      * @brief Handle end_game command
@@ -111,5 +109,6 @@ class GameController {
     // Track file uploads per session
     std::unordered_map<std::string, FileUploadState> file_uploads_;
 
+    std::unique_ptr<IGameParser> parser_;
     Logger& logger_;
 };

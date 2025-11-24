@@ -88,9 +88,8 @@ json GameContext::handleStartRequest(const std::string& player_id) {
     return current_state_->handleStartRequest(this, player_id);
 }
 
-json GameContext::handleMoveRequest(const std::string& player_id, const std::string& from,
-                                    const std::string& to) {
-    return current_state_->handleMoveRequest(this, player_id, from, to);
+json GameContext::handleMoveRequest(const std::string& player_id, const ParsedMove& move) {
+    return current_state_->handleMoveRequest(this, player_id, move);
 }
 
 json GameContext::handleEndRequest(const std::string& player_id) {

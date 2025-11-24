@@ -1,12 +1,16 @@
 #include "GameController.hpp"
 
+#include <utility>
 #include "GameContext.hpp"
 #include "MoveParser.hpp"
+#include "ParserFactory.hpp"
 
 using json = nlohmann::json;
 
-GameController::GameController()
-    : game_context_(std::make_unique<GameContext>()), logger_(Logger::instance()) {
+GameController::GameController(ParserType parser)
+    : game_context_(std::make_unique<GameContext>()),
+      parser_(std::move(ParserFactory::createParser(parser))),   
+      logger_(Logger::instance()) {
     logger_.debug("GameController initialised");
 }
 
@@ -161,31 +165,41 @@ std::string GameController::handleStartGame(const std::string& session_id) {
     return response.dump();
 }
 
-std::string GameController::handleMoveToParse(const std::string& session_id,
-                                              const std::string& move) {
-    logger_.debug("Session " + session_id + " move to parse: " + move);
+std::string GameController::handleMoveToParse(
+    const std::string& session_id,
+    const std::string& move) {
 
-    MoveParser parser;
-    auto parsedMove = parser.parse(move);
-    if (parsedMove.has_value()) {
-        return handleParsedMove(session_id, parsedMove->from, parsedMove->to);
-    } else {
+    logger_.debug("Session " + session_id + " parsing move with " + parser_->getParserType() + ": " + move);
+
+    auto parsed_move = parser_->parseMove(move);
+
+    if (!parsed_move) {
         json error;
-        error["error"] = "Couldn't parse move";
+        error["type"] = "error";
+        error["error"] = "Couldn't parse move using " + parser_->getParserType();
+        error["parser_used"] = parser_->getParserType();
         return error.dump();
     }
+
+    return handleParsedMove(session_id, *parsed_move);
 }
 
-std::string GameController::handleParsedMove(const std::string& session_id, const std::string& from,
-                                             const std::string& to) {
-    logger_.info("Session " + session_id + " move: " + from + "-" + to);
+std::string GameController::handleParsedMove(
+        const std::string& session_id, 
+        const ParsedMove& move) {
+
+    if (move.is_san) {
+        logger_.info("Session " + session_id + " move: " + move.notation);
+    } else {
+        logger_.info("Session " + session_id + " move: " + move.from + "-" + move.to);
+    }
 
     json response;
 
     // Thread-safe instruction block
     {
         std::lock_guard<std::mutex> lock(game_context_->getMutex());
-        response = game_context_->handleMoveRequest(session_id, from, to);
+        response = game_context_->handleMoveRequest(session_id, move);
     }
 
     return response.dump();
@@ -287,12 +301,14 @@ std::optional<std::string> GameController::handleFileUploadChunk(
     }
 }
 
-void GameController::processFileContent(const std::string& session_id, const std::string& filename,
-                                        const std::string& data) {
-    MoveParser parser;
-    auto moves = parser.parseGame(data);
+void GameController::processFileContent(
+    const std::string& session_id, 
+    const std::string& filename,
+    const std::string& data) {
 
-    if (moves.empty()) {
+    auto moves = parser_->parseGame(data);
+
+    if (!moves.has_value() || (*moves).empty()) {
         logger_.warning("No valid moves found in game file");
 
         json error_response = {{"type", "game_complete"},
@@ -304,7 +320,7 @@ void GameController::processFileContent(const std::string& session_id, const std
         return;
     }
 
-    logger_.info("Parsed " + std::to_string(moves.size()) + " moves from file");
+    logger_.info("Parsed " + std::to_string((*moves).size()) + " moves from file");
 
     // Execute each move and send move_result
     int successful_moves = 0;
@@ -313,11 +329,11 @@ void GameController::processFileContent(const std::string& session_id, const std
     bool game_complete = false;
     std::string result = "";
 
-    for (size_t i = 0; i < moves.size(); ++i) {
-        const auto& move = moves[i];
+    for (size_t i = 0; i < (*moves).size(); ++i) {
+        const auto& move = (*moves)[i];
 
         try {
-            std::string move_response = handleParsedMove(session_id, move.from, move.to);
+            std::string move_response = handleParsedMove(session_id, move);
             json move_json = json::parse(move_response);
 
             // Small delay to allow client to process
@@ -362,7 +378,7 @@ void GameController::processFileContent(const std::string& session_id, const std
                                {"result", result},
                                {"filename", filename},
                                {"total_moves", successful_moves},
-                               {"requested_moves", moves.size()}};
+                               {"requested_moves", (*moves).size()}};
 
         if (!last_error.empty()) {
             final_response["error"] = last_error;

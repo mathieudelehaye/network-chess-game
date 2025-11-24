@@ -8,23 +8,25 @@ ChessGame::ChessGame() : moveNumber_(1) {
     board_.setFen(chess::constants::STARTPOS);
 }
 
-std::optional<StrikeData> ChessGame::applyMove(const std::string& from, const std::string& to) {
-    auto move = findMove(from, to);
-    if (!move) {
+std::optional<StrikeData> ChessGame::applyMove(const ParsedMove& move) {
+    
+    auto chess_move = (move.is_san ? findMoveFromSan(move.notation) : findMove(move.from, move.to));
+    
+    if (!chess_move) {
         return std::nullopt;
     }
 
-    if (move->typeOf() == chess::Move::CASTLING) {
+    if (chess_move->typeOf() == chess::Move::CASTLING) {
         auto& logger = Logger::instance();
         logger.debug("Castling move detected");
     }
 
     StrikeData data;
 
-    fillStrikeDataBeforeMove(data, to);
-    board_.makeMove(*move);
+    fillStrikeDataBeforeMove(data, *chess_move);
+    board_.makeMove(*chess_move);
     moveNumber_++;  // Need to manually increment move number
-    fillStrikeDataAfterMove(data, *move);
+    fillStrikeDataAfterMove(data, *chess_move);
 
     return data;
 }
@@ -35,10 +37,6 @@ chess::Color ChessGame::getCurrentPlayer() const {
 
 std::string ChessGame::getFEN() const {
     return board_.getFen();
-}
-
-bool ChessGame::isLegalMove(const std::string& from, const std::string& to) const {
-    return findMove(from, to).has_value();
 }
 
 void ChessGame::reset() {
@@ -65,8 +63,10 @@ bool ChessGame::isStalemate() const {
     return result == chess::GameResult::DRAW;
 }
 
-std::optional<chess::Move> ChessGame::findMove(const std::string& from,
-                                               const std::string& to) const {
+std::optional<chess::Move> ChessGame::findMove(
+    const std::string& from,
+    const std::string& to) const {
+
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board_);
 
@@ -95,11 +95,47 @@ std::optional<chess::Move> ChessGame::findMove(const std::string& from,
     return std::nullopt;
 }
 
+std::optional<chess::Move> ChessGame::findMoveFromSan(const std::string& san_move) const {
+    chess::Movelist moves;
+    chess::movegen::legalmoves(moves, board_);
+
+    for (const auto& move : moves) {
+        // The library provides a utility to convert a Move object + Board State -> SAN string
+        // We generate the SAN for every legal move and see if it matches the user input.
+        std::string generatedSan = chess::uci::moveToSan(board_, move);
+
+        // 1. Direct Match (Most accurate)
+        if (generatedSan == san_move) {
+            return move;
+        }
+
+        // 2. Loose Match (Optional but recommended for User Input)
+        // Users often type "Nf3" even if the actual move is "Nf3+" (check) or "Nf3#" (mate).
+        // This block handles that case by stripping symbols from the generated move.
+        std::string cleanSan = generatedSan;
+        if (!cleanSan.empty() && (cleanSan.back() == '+' || cleanSan.back() == '#')) {
+            cleanSan.pop_back();
+        }
+        
+        // Also strip input just in case user typed "Nf3+" but it wasn't a check
+        std::string cleanInput = san_move;
+            if (!cleanInput.empty() && (cleanInput.back() == '+' || cleanInput.back() == '#')) {
+            cleanInput.pop_back();
+        }
+
+        if (cleanSan == cleanInput) {
+            return move;
+        }
+    }
+
+    return std::nullopt;
+}
+
 // TODO: consider returning a variable copy rather than passing the variable by
 // reference
-void ChessGame::fillStrikeDataBeforeMove(StrikeData& data, const std::string& to) const {
+void ChessGame::fillStrikeDataBeforeMove(StrikeData& data, const chess::Move& move) const {
     // Check what's on the destination square
-    auto destination = chess::Square(to);
+    auto destination = move.to();
     auto captured = board_.at(destination);
 
     data.is_capture = (captured != chess::Piece::NONE);

@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 
+#include "ParserFactory.hpp"
 #include "StrikeData.hpp"
 
 /**
@@ -21,12 +22,7 @@ class ChessGame {
      * @brief Apply a move and return strike data
      * @return StrikeData if move is valid, nullopt otherwise
      */
-    std::optional<StrikeData> applyMove(const std::string& from, const std::string& to);
-
-    /**
-     * @brief Check if a move is legal
-     */
-    bool isLegalMove(const std::string& from, const std::string& to) const;
+    std::optional<StrikeData> applyMove(const ParsedMove& move);
 
     /**
      * @brief Get current player color
@@ -57,7 +53,9 @@ class ChessGame {
 
     // Helper methods
     std::optional<chess::Move> findMove(const std::string& from, const std::string& to) const;
-    void fillStrikeDataBeforeMove(StrikeData& data, const std::string& to) const;
+    std::optional<chess::Move> findMoveFromSan(const std::string& san_move) const;
+    
+    void fillStrikeDataBeforeMove(StrikeData& data, const chess::Move& move) const;
     void fillStrikeDataAfterMove(StrikeData& data, const chess::Move& move) const;
     std::string getPieceName(chess::PieceType type) const;
 

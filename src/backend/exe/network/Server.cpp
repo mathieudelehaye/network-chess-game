@@ -15,10 +15,10 @@
 
 using json = nlohmann::json;
 
-Server::Server(NetworkMode mode, int port) : 
+Server::Server(NetworkMode mode, int port, ParserType parser) : 
     network(mode), 
     port(port), 
-    shared_controller_(std::make_shared<GameController>()) {
+    shared_controller_(std::make_shared<GameController>(parser)) {
 
     setupSendCallbacks();
 }

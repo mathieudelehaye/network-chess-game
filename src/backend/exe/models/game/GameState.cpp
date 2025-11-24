@@ -120,7 +120,7 @@ json ReadyToStartState::handleEndRequest(GameContext* context, const std::string
 
 json InProgressState::handleMoveRequest(
     GameContext* context, const std::string& player_id,
-    const std::string& from, const std::string& to) {
+    const ParsedMove& move) {
         
     auto* game = context->getChessGame();
     if (!game) {
@@ -128,7 +128,7 @@ json InProgressState::handleMoveRequest(
     }
 
     // Apply move to model
-    auto strike_data = game->applyMove(from, to);
+    auto strike_data = game->applyMove(move);
     if (!strike_data) {
         return buildError("Invalid move");
     }

@@ -86,10 +86,7 @@ class NoGUIConsoleView(IView):
                 return ('q', None)
             
         # Handle regular move
-        if '-' in command:
-            return ('m', command)
-        
-        return (None, None)
+        return ('m', command)
 
     def cleanup(self) -> None:
         """Clean up view resources"""

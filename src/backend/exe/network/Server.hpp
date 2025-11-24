@@ -9,12 +9,13 @@
 
 #include "GameContext.hpp"
 #include "NetworkMode.hpp"
+#include "ParserFactory.hpp"
 #include "Session.hpp"
 #include "TransportFactory.hpp"
 
 class Server {
 public:
-    Server(NetworkMode mode, int port);
+    Server(NetworkMode mode, int port, ParserType parser);
     ~Server() { stop(); }
 
     void start(const std::string& ip);
@@ -35,7 +36,7 @@ private:
     void broadcastToAll(const std::string& message);
     void broadcastToOthers(const std::string& exclude_session_id, const std::string& message);
     void unicastTo(const std::string& session_id, const std::string& message);
-    
+
     NetworkMode network;
     int port;
     int server_fd = -1;

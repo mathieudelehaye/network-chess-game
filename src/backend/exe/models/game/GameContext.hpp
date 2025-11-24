@@ -7,6 +7,7 @@
 
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
+#include "ParserFactory.hpp"
 
 using UnicastCallback = std::function<void(const std::string& session_id, const json& message)>;
 
@@ -57,8 +58,7 @@ class GameContext {
     nlohmann::json handleJoinRequest(const std::string& player_id, const std::string& color);
     nlohmann::json handleJoinRequestAsSinglePlayer(const std::string& player_id);
     nlohmann::json handleStartRequest(const std::string& player_id);
-    nlohmann::json handleMoveRequest(const std::string& player_id, const std::string& from,
-                                     const std::string& to);
+    nlohmann::json handleMoveRequest(const std::string& player_id, const ParsedMove& move);
     nlohmann::json handleEndRequest(const std::string& player_id);
     nlohmann::json handleDisplayBoard();
 

@@ -16,8 +16,7 @@ class WaitingForPlayersState : public IGameState {
         return buildError("Cannot start: waiting for players");
     }
 
-    json handleMoveRequest(GameContext* /*context*/, const std::string& /*player_id*/,
-                           const std::string& /*from*/, const std::string& /*to*/) override {
+    json handleMoveRequest(GameContext* context, const std::string& player_id, const ParsedMove& move) override {
         return buildError("Cannot move: game not started");
     }
 
@@ -55,8 +54,7 @@ class ReadyToStartState : public IGameState {
 
     json handleStartRequest(GameContext* context, const std::string& player_id) override;
 
-    json handleMoveRequest(GameContext* /*context*/, const std::string& /*player_id*/,
-                           const std::string& /*from*/, const std::string& /*to*/) override {
+    json handleMoveRequest(GameContext* /*context*/, const std::string& /*player_id*/, const ParsedMove& /*move*/) override {
         return buildError("Game not started yet");
     }
 
@@ -94,8 +92,7 @@ class InProgressState : public IGameState {
         return buildError("Game already started");
     }
 
-    json handleMoveRequest(GameContext* context, const std::string& /*player_id*/,
-                           const std::string& from, const std::string& to) override;
+    json handleMoveRequest(GameContext* context, const std::string& /*player_id*/, const ParsedMove& /*move*/) override;
 
     json handleEndRequest(GameContext* context, const std::string& player_id) override;
 
@@ -129,8 +126,7 @@ class GameOverState : public IGameState {
         return buildError("Game is over. Reset first");
     }
 
-    json handleMoveRequest(GameContext* /*context*/, const std::string& /*player_id*/,
-                           const std::string& /*from*/, const std::string& /*to*/) override {
+    json handleMoveRequest(GameContext* /*context*/, const std::string& /*player_id*/, const ParsedMove& /*move*/) override {
         return buildError("Game is over");
     }
 

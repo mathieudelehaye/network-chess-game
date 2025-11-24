@@ -7,11 +7,11 @@
 /**
  * @brief Parsed move data
  */
-struct ParsedMove {
+struct SimpleNotationParsedMove {
     std::string from;  // e.g., "a2"
     std::string to;    // e.g., "a4"
 
-    ParsedMove(const std::string& f, const std::string& t) : from(f), to(t) {}
+    SimpleNotationParsedMove(const std::string& f, const std::string& t) : from(f), to(t) {}
 };
 
 /**
@@ -27,12 +27,12 @@ class MoveParser {
      * @param move The move string (e.g., "a2-a4")
      * @return ParsedMove if valid, std::nullopt if invalid
      */
-    std::optional<ParsedMove> parse(const std::string& move);
+    std::optional<SimpleNotationParsedMove> parse(const std::string& move);
 
     /**
      * @brief Parse entire game file (for file upload mode)
      * @param move The file content
      * @return The parsed moves
      */
-    std::vector<ParsedMove> parseGame(const std::string& game_content);
+    std::vector<SimpleNotationParsedMove> parseGame(const std::string& game_content);
 };
