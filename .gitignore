@@ -8,9 +8,6 @@
 *.obj
 *.jar
 
-doc/backend/
-doc/frontend/
-
 bin/
 download/
 .vscode/
@@ -66,3 +63,9 @@ build/
 output/
 
 notes/
+
+doc/backend/
+
+doc/frontend/_build/
+doc/frontend/html/
+doc/frontend/.doctrees/

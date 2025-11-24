@@ -2,3 +2,6 @@ pylint
 black
 pygame
 pytest
+sphinx 
+sphinx-rtd-theme 
+sphinx-autodoc-typehints

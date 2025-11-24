@@ -56,3 +56,12 @@ pytest test/network/test_tcp_transport.py -v
 
 deactivate
 ```
+
+- To generate the documentation (not auto-generated on every build):
+```
+cd doc/frontend
+
+rm -rf html
+
+sphinx-build -b html . html
+```
