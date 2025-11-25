@@ -1,6 +1,7 @@
 #include "GameController.hpp"
 
 #include <utility>
+
 #include "GameContext.hpp"
 #include "MoveParser.hpp"
 #include "ParserFactory.hpp"
@@ -9,7 +10,7 @@ using json = nlohmann::json;
 
 GameController::GameController(ParserType parser)
     : game_context_(std::make_unique<GameContext>()),
-      parser_(std::move(ParserFactory::createParser(parser))),   
+      parser_(std::move(ParserFactory::createParser(parser))),
       logger_(Logger::instance()) {
     logger_.debug("GameController initialised");
 }
@@ -99,10 +100,8 @@ void GameController::routeDisconnect(const std::string& session_id) {
     }
 }
 
-std::optional<std::string> GameController::handleMessage(
-    const std::string& session_id,
-    const std::string& message) {
-
+std::optional<std::string> GameController::handleMessage(const std::string& session_id,
+                                                         const std::string& message) {
     logger_.debug("Routing message for session: " + session_id);
 
     auto json_message = json::parse(message);
@@ -132,10 +131,8 @@ std::optional<std::string> GameController::handleMessage(
     return error.dump();
 }
 
-std::string GameController::handleJoinGame(
-    const std::string& session_id, 
-    bool single_player,
-    const std::string& color) {
+std::string GameController::handleJoinGame(const std::string& session_id, bool single_player,
+                                           const std::string& color) {
     logger_.info("Session " + session_id + " joining as " + color);
 
     json response;
@@ -165,11 +162,10 @@ std::string GameController::handleStartGame(const std::string& session_id) {
     return response.dump();
 }
 
-std::string GameController::handleMoveToParse(
-    const std::string& session_id,
-    const std::string& move) {
-
-    logger_.debug("Session " + session_id + " parsing move with " + parser_->getParserType() + ": " + move);
+std::string GameController::handleMoveToParse(const std::string& session_id,
+                                              const std::string& move) {
+    logger_.debug("Session " + session_id + " parsing move with " + parser_->getParserType() +
+                  ": " + move);
 
     auto parsed_move = parser_->parseMove(move);
 
@@ -184,10 +180,8 @@ std::string GameController::handleMoveToParse(
     return handleParsedMove(session_id, *parsed_move);
 }
 
-std::string GameController::handleParsedMove(
-        const std::string& session_id, 
-        const ParsedMove& move) {
-
+std::string GameController::handleParsedMove(const std::string& session_id,
+                                             const ParsedMove& move) {
     if (move.is_san) {
         logger_.info("Session " + session_id + " move: " + move.notation);
     } else {
@@ -235,10 +229,8 @@ std::string GameController::handleDisplayBoard() {
 
 // TODO: file chunk upload and file reconstruction should be moved to a separate
 // class in the Utils part of the backend source code.
-std::optional<std::string> GameController::handleFileUploadChunk(
-    const nlohmann::json& json_message,
-    const std::string& session_id) {
-
+std::optional<std::string> GameController::handleFileUploadChunk(const nlohmann::json& json_message,
+                                                                 const std::string& session_id) {
     try {
         auto metadata = json_message["metadata"];
         std::string filename = metadata["filename"];
@@ -301,11 +293,8 @@ std::optional<std::string> GameController::handleFileUploadChunk(
     }
 }
 
-void GameController::processFileContent(
-    const std::string& session_id, 
-    const std::string& filename,
-    const std::string& data) {
-
+void GameController::processFileContent(const std::string& session_id, const std::string& filename,
+                                        const std::string& data) {
     auto moves = parser_->parseGame(data);
 
     if (!moves.has_value() || (*moves).empty()) {
@@ -360,7 +349,8 @@ void GameController::processFileContent(
                     logger_.info("Game ended at move " + std::to_string(i + 1));
                     const std::string winner_color = strike.value("color", "");
                     game_complete = true;
-                    result = checkmate ? "checkmate (" + winner_color + " wins)" : "checkmate (" + winner_color + " wins)";
+                    result = checkmate ? "checkmate (" + winner_color + " wins)"
+                                       : "checkmate (" + winner_color + " wins)";
                     break;
                 }
             }

@@ -43,7 +43,7 @@ int GameContext::getElapsedSeconds() const {
     if (!timer_started_) {
         return 0;
     }
-    
+
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - game_start_time_);
     return static_cast<int>(elapsed.count());

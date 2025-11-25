@@ -9,9 +9,8 @@ ChessGame::ChessGame() : moveNumber_(1) {
 }
 
 std::optional<StrikeData> ChessGame::applyMove(const ParsedMove& move) {
-    
     auto chess_move = (move.is_san ? findMoveFromSan(move.notation) : findMove(move.from, move.to));
-    
+
     if (!chess_move) {
         return std::nullopt;
     }
@@ -63,10 +62,8 @@ bool ChessGame::isStalemate() const {
     return result == chess::GameResult::DRAW;
 }
 
-std::optional<chess::Move> ChessGame::findMove(
-    const std::string& from,
-    const std::string& to) const {
-
+std::optional<chess::Move> ChessGame::findMove(const std::string& from,
+                                               const std::string& to) const {
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board_);
 
@@ -116,10 +113,10 @@ std::optional<chess::Move> ChessGame::findMoveFromSan(const std::string& san_mov
         if (!cleanSan.empty() && (cleanSan.back() == '+' || cleanSan.back() == '#')) {
             cleanSan.pop_back();
         }
-        
+
         // Also strip input just in case user typed "Nf3+" but it wasn't a check
         std::string cleanInput = san_move;
-            if (!cleanInput.empty() && (cleanInput.back() == '+' || cleanInput.back() == '#')) {
+        if (!cleanInput.empty() && (cleanInput.back() == '+' || cleanInput.back() == '#')) {
             cleanInput.pop_back();
         }
 

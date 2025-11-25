@@ -8,11 +8,11 @@
 
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
-#include <chrono>
 
 #include "ChessGame.hpp"
 #include "IGameState.hpp"
@@ -42,7 +42,7 @@ class GameContext {
      * @brief Construct game context with initial state.
      */
     GameContext();
-    
+
     /**
      * @brief Destructor.
      */
@@ -54,21 +54,21 @@ class GameContext {
      * @param broadcast Callback for broadcast messages
      */
     void setSendCallbacks(UnicastCallback unicast, BroadcastCallback broadcast);
-    
+
     /**
      * @brief Send message to specific session.
      * @param session_id Target session ID
      * @param message Message to send
      */
     void unicast(const std::string& session_id, const std::string& message);
-    
+
     /**
      * @brief Broadcast message to all sessions.
      * @param session_id Originating session ID
      * @param message Message to broadcast
      */
     void broadcastToAll(const std::string& session_id, const std::string& message);
-    
+
     /**
      * @brief Broadcast message to all sessions except originator.
      * @param session_id Originating session ID to exclude
@@ -87,7 +87,7 @@ class GameContext {
      * @brief Start game timer.
      */
     void startGameTimer();
-    
+
     /**
      * @brief Get elapsed time since game start.
      * @return Elapsed seconds
@@ -105,7 +105,7 @@ class GameContext {
      * @param id White player's session ID
      */
     void setWhitePlayer(const std::string& id) { white_player_id_ = id; }
-    
+
     /**
      * @brief Set black player session ID.
      * @param id Black player's session ID
@@ -117,7 +117,7 @@ class GameContext {
      * @return White player's session ID
      */
     std::string getWhitePlayer() const { return white_player_id_; }
-    
+
     /**
      * @brief Get black player session ID.
      * @return Black player's session ID
@@ -129,13 +129,13 @@ class GameContext {
      * @return True if white player assigned
      */
     bool hasWhitePlayer() const { return !white_player_id_.empty(); }
-    
+
     /**
      * @brief Check if black player joined.
      * @return True if black player assigned
      */
     bool hasBlackPlayer() const { return !black_player_id_.empty(); }
-    
+
     /**
      * @brief Check if both players joined.
      * @return True if both white and black players assigned
@@ -153,7 +153,7 @@ class GameContext {
      * @return Pointer to ChessGame
      */
     ChessGame* getChessGame() { return chess_game_.get(); }
-    
+
     /**
      * @brief Get chess game instance (const).
      * @return Const pointer to ChessGame
@@ -173,21 +173,21 @@ class GameContext {
      * @return JSON response
      */
     nlohmann::json handleJoinRequest(const std::string& player_id, const std::string& color);
-    
+
     /**
      * @brief Handle single-player join request (delegates to current state).
      * @param player_id Joining player's session ID
      * @return JSON response
      */
     nlohmann::json handleJoinRequestAsSinglePlayer(const std::string& player_id);
-    
+
     /**
      * @brief Handle start request (delegates to current state).
      * @param player_id Requesting player's session ID
      * @return JSON response
      */
     nlohmann::json handleStartRequest(const std::string& player_id);
-    
+
     /**
      * @brief Handle move request (delegates to current state).
      * @param player_id Moving player's session ID
@@ -195,14 +195,14 @@ class GameContext {
      * @return JSON response
      */
     nlohmann::json handleMoveRequest(const std::string& player_id, const ParsedMove& move);
-    
+
     /**
      * @brief Handle end/reset request (delegates to current state).
      * @param player_id Requesting player's session ID
      * @return JSON response
      */
     nlohmann::json handleEndRequest(const std::string& player_id);
-    
+
     /**
      * @brief Handle display board request (delegates to current state).
      * @return JSON response with board state
@@ -217,7 +217,7 @@ class GameContext {
     std::string white_player_id_;
     std::string black_player_id_;
     mutable std::mutex mutex_;
-    
+
     std::chrono::steady_clock::time_point game_start_time_;
     bool timer_started_ = false;
 };

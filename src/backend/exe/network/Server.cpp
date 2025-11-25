@@ -1,12 +1,12 @@
 #include "Server.hpp"
 
 #include <arpa/inet.h>
-#include <cstring>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <cstring>
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -15,11 +15,8 @@
 
 using json = nlohmann::json;
 
-Server::Server(NetworkMode mode, int port, ParserType parser) : 
-    network(mode), 
-    port(port), 
-    shared_controller_(std::make_shared<GameController>(parser)) {
-
+Server::Server(NetworkMode mode, int port, ParserType parser)
+    : network(mode), port(port), shared_controller_(std::make_shared<GameController>(parser)) {
     setupSendCallbacks();
 }
 
@@ -46,7 +43,7 @@ void Server::setupSendCallbacks() {
 
 void Server::start(const std::string& ip) {
     running = true;
-    
+
     auto& logger = Logger::instance();
 
     connectTCP(ip, port);
@@ -57,9 +54,9 @@ void Server::start(const std::string& ip) {
 
 void Server::start_unix(const std::string& socket_path) {
     running = true;
-    
+
     auto& logger = Logger::instance();
-    
+
     connectIPC(socket_path);
     logger.info("Server started on Unix socket: " + socket_path);
 
@@ -95,7 +92,7 @@ void Server::stop() {
         close(server_fd);
         server_fd = -1;
     }
-    
+
     // Clean up Unix socket file if it exists
     if (network == NetworkMode::IPC && !unix_socket_path_.empty()) {
         unlink(unix_socket_path_.c_str());
@@ -166,47 +163,48 @@ void Server::connectTCP(const std::string& ip, int port) {
 
 void Server::connectIPC(const std::string& socket_path) {
     auto& logger = Logger::instance();
-    
+
     // Remove existing socket file if it exists
     unlink(socket_path.c_str());
-    
+
     server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server_fd < 0) {
         throw std::runtime_error("Cannot create Unix socket: " + std::string(strerror(errno)));
     }
-    
+
     sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
-    
+
     // Check path length
     if (socket_path.length() >= sizeof(addr.sun_path)) {
         close(server_fd);
         throw std::runtime_error("Socket path too long: " + socket_path);
     }
-    
+
     strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
-    
+
     if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
         close(server_fd);
         throw std::runtime_error("Unix socket bind failed: " + std::string(strerror(errno)));
     }
-    
+
     // Set socket permissions (0666 = rw-rw-rw-)
     if (chmod(socket_path.c_str(), 0666) < 0) {
         close(server_fd);
         unlink(socket_path.c_str());
-        throw std::runtime_error("Failed to set socket permissions: " + std::string(strerror(errno)));
+        throw std::runtime_error("Failed to set socket permissions: " +
+                                 std::string(strerror(errno)));
     }
-    
+
     if (listen(server_fd, 10) < 0) {
         close(server_fd);
         unlink(socket_path.c_str());
         throw std::runtime_error("Unix socket listen failed: " + std::string(strerror(errno)));
     }
-    
+
     // Store socket path for cleanup
     unix_socket_path_ = socket_path;
-    
+
     logger.info("Unix socket listening on " + socket_path);
 }
 

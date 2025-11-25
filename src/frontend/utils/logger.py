@@ -30,16 +30,15 @@ class Logger:
 
         self._initialised = True
 
-        # change this with one of the values: INFO, DEBUG, WARNING, ERROR
-        logging_level = logging.DEBUG
+        logging_level = logging.INFO
 
-        # Setup logging
+        # Setup logging. Supported logging levels are: INFO, DEBUG, WARNING, ERROR 
         self.logger = logging.getLogger("ChessClient")
         self.logger.setLevel(logging_level)
 
         # Console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging_level)
+        self.console_handler = logging.StreamHandler(sys.stdout)
+        self.console_handler.setLevel(logging_level)
 
         # File handler
         current_file = Path(__file__)
@@ -49,19 +48,24 @@ class Logger:
         log_dir.mkdir(exist_ok=True)
 
         # Log file is re-written each time the client is run
-        file_handler = logging.FileHandler(log_dir / "client.log", mode="w")
-        file_handler.setLevel(logging_level)
+        self.file_handler = logging.FileHandler(log_dir / "client.log", mode="w")
+        self.file_handler.setLevel(logging_level)
 
         # Formatter
         formatter = logging.Formatter(
             "[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
 
-        console_handler.setFormatter(formatter)
-        file_handler.setFormatter(formatter)
+        self.console_handler.setFormatter(formatter)
+        self.file_handler.setFormatter(formatter)
 
-        self.logger.addHandler(console_handler)
-        self.logger.addHandler(file_handler)
+        self.logger.addHandler(self.console_handler)
+        self.logger.addHandler(self.file_handler)
+
+    def set_level(self, logging_level):
+        self.logger.setLevel(logging_level)
+        self.console_handler.setLevel(logging_level)
+        self.file_handler.setLevel(logging_level)
 
     def debug(self, message: str):
         """Log debug message.

@@ -51,7 +51,7 @@ python --version && which python
 uv pip install -r requirements.txt
 
 # Run client instance
-python -m chess_client
+PYTHONPATH=src/frontend python -m chess_client
 
 # Run unit tests
 pytest test/network/test_tcp_transport.py -v

@@ -3,8 +3,8 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-#include "ParserFactory.hpp"
 #include "Logger.hpp"
+#include "ParserFactory.hpp"
 
 using json = nlohmann::json;
 
@@ -21,7 +21,8 @@ class IGameState {
     virtual json handleJoinRequestAsSinglePlayer(GameContext* context,
                                                  const std::string& player_id) = 0;
     virtual json handleStartRequest(GameContext* context, const std::string& player_id) = 0;
-    virtual json handleMoveRequest(GameContext* context, const std::string& player_id, const ParsedMove& move) = 0;
+    virtual json handleMoveRequest(GameContext* context, const std::string& player_id,
+                                   const ParsedMove& move) = 0;
     virtual json handleEndRequest(GameContext* context, const std::string& player_id) = 0;
     virtual json handleDisplayBoard(GameContext* context) = 0;
 

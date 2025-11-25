@@ -3,10 +3,8 @@
 #include "GameContext.hpp"
 #include "Logger.hpp"
 
-json WaitingForPlayersState::handleJoinRequest(
-    GameContext* context, const std::string& player_id,
-    const std::string& color) {
-
+json WaitingForPlayersState::handleJoinRequest(GameContext* context, const std::string& player_id,
+                                               const std::string& color) {
     auto& logger = Logger::instance();
 
     // Validate and assign player color
@@ -88,31 +86,25 @@ json ReadyToStartState::handleStartRequest(GameContext* context, const std::stri
 
     // Start the game timer
     context->startGameTimer();
-    
+
     logger.info("Game started");
-    
+
     // Get initial board state
     std::string fen = game->getFEN();
 
     // Build response for the player who started
     json start_response = {
-        {"type", "game_started"}, 
+        {"type", "game_started"},
         {"status", context->getStatusMessage()},
-        {"board", {
-            {"fen", fen}
-        }},
+        {"board", {{"fen", fen}}},
     };
 
     // Broadcast game_started to ALL players
-    json game_started_broadcast = {
-        {"type", "game_started"},
-        {"status", context->getStatusMessage()},
-        {"white_player", context->getWhitePlayer()},
-        {"black_player", context->getBlackPlayer()},
-        {"board", {
-            {"fen", fen}
-        }}
-    };
+    json game_started_broadcast = {{"type", "game_started"},
+                                   {"status", context->getStatusMessage()},
+                                   {"white_player", context->getWhitePlayer()},
+                                   {"black_player", context->getBlackPlayer()},
+                                   {"board", {{"fen", fen}}}};
     context->broadcastToOthers(player_id, game_started_broadcast.dump());
 
     return start_response;
@@ -122,10 +114,8 @@ json ReadyToStartState::handleEndRequest(GameContext* context, const std::string
     return context->resetGame(player_id);
 }
 
-json InProgressState::handleMoveRequest(
-    GameContext* context, const std::string& player_id,
-    const ParsedMove& move) {
-        
+json InProgressState::handleMoveRequest(GameContext* context, const std::string& player_id,
+                                        const ParsedMove& move) {
     auto* game = context->getChessGame();
     if (!game) {
         return buildError("Game not initialised");
@@ -139,7 +129,7 @@ json InProgressState::handleMoveRequest(
 
     // Get FEN representation
     std::string fen = game->getFEN();
-    
+
     // Get elapsed time since game started
     int elapsed_seconds = context->getElapsedSeconds();
 
@@ -148,25 +138,22 @@ json InProgressState::handleMoveRequest(
     response["type"] = "move_result";
     response["success"] = true;
     response["timestamp"] = elapsed_seconds;
-    response["strike"] = {
-        {"case_src", strike_data->case_src},
-        {"case_dest", strike_data->case_dest},
-        {"piece", strike_data->piece},
-        {"color", strike_data->color},
-        {"strike_number", strike_data->strike_number},
-        {"is_capture", strike_data->is_capture},
-        {"captured_piece", strike_data->captured_piece},
-        {"captured_color", strike_data->captured_color},
-        {"is_castling", strike_data->is_castling},
-        {"castling_type", strike_data->castling_type},
-        {"check", strike_data->is_check},
-        {"checkmate", strike_data->is_checkmate},
-        {"stalemate", strike_data->is_stalemate}};
-    
+    response["strike"] = {{"case_src", strike_data->case_src},
+                          {"case_dest", strike_data->case_dest},
+                          {"piece", strike_data->piece},
+                          {"color", strike_data->color},
+                          {"strike_number", strike_data->strike_number},
+                          {"is_capture", strike_data->is_capture},
+                          {"captured_piece", strike_data->captured_piece},
+                          {"captured_color", strike_data->captured_color},
+                          {"is_castling", strike_data->is_castling},
+                          {"castling_type", strike_data->castling_type},
+                          {"check", strike_data->is_check},
+                          {"checkmate", strike_data->is_checkmate},
+                          {"stalemate", strike_data->is_stalemate}};
+
     // Add board data with both formats
-    response["board"] = {
-        {"fen", fen}
-    };
+    response["board"] = {{"fen", fen}};
 
     // Check if game ended
     if (strike_data->is_checkmate || strike_data->is_stalemate) {

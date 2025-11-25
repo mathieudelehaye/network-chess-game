@@ -51,13 +51,13 @@ void IpcTransport::start(ReceiveCallback onReceive) {
         while (!st.stop_requested() && running.load()) {
             logger.trace("Calling read() on Unix socket fd " + std::to_string(fd));
             ssize_t n = read(fd, buffer, sizeof(buffer));
-            logger.trace("read() returned " + std::to_string(n) + " for Unix socket fd " + 
-                        std::to_string(fd));
+            logger.trace("read() returned " + std::to_string(n) + " for Unix socket fd " +
+                         std::to_string(fd));
 
             if (n <= 0) {
                 if (n == 0) {
-                    logger.trace("Client disconnected (EOF) on Unix socket fd " + 
-                                std::to_string(fd));
+                    logger.trace("Client disconnected (EOF) on Unix socket fd " +
+                                 std::to_string(fd));
                     connection_closed_by_peer = true;
                 } else {
                     logger.error("Read error on Unix socket fd " + std::to_string(fd) + ": " +

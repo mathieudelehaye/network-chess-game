@@ -54,7 +54,7 @@ class ChessGame {
     // Helper methods
     std::optional<chess::Move> findMove(const std::string& from, const std::string& to) const;
     std::optional<chess::Move> findMoveFromSan(const std::string& san_move) const;
-    
+
     void fillStrikeDataBeforeMove(StrikeData& data, const chess::Move& move) const;
     void fillStrikeDataAfterMove(StrikeData& data, const chess::Move& move) const;
     std::string getPieceName(chess::PieceType type) const;

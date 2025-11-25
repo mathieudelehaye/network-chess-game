@@ -20,18 +20,18 @@ Logger::Logger() {
     std::filesystem::create_directories(log_dir);
 
     // Console sink
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level(debug_level);
+    console_sink_ = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink_->set_level(debug_level);
 
     // File sink (overwrites on each run)
-    auto file_sink =
+    file_sink_=
         std::make_shared<spdlog::sinks::basic_file_sink_mt>((log_dir / "server.log").string(),
                                                             true  // truncate file
         );
-    file_sink->set_level(debug_level);
+    file_sink_->set_level(debug_level);
 
     // Combine sinks
-    std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
+    std::vector<spdlog::sink_ptr> sinks{console_sink_, file_sink_};
     logger_ = std::make_shared<spdlog::logger>("ChessServer", sinks.begin(), sinks.end());
 
     // Set log level and pattern
@@ -75,5 +75,17 @@ void Logger::critical(const std::string& msg) {
 }
 
 void Logger::setLogLevel(spdlog::level::level_enum debug_level) {
+    // Update logger level
     logger_->set_level(debug_level);
+    
+    // Update sink levels
+    console_sink_->set_level(debug_level);
+    file_sink_->set_level(debug_level);
+    
+    // Flush immediately at debug level when in debug mode
+    if (debug_level <= spdlog::level::debug) {
+        logger_->flush_on(spdlog::level::debug);
+    } else {
+        logger_->flush_on(spdlog::level::info);
+    }
 }

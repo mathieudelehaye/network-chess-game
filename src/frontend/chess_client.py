@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from network.client import Client
 from network.transport.transport_interface import TransportMode
-from utils.logger import Logger
+from utils.logger import Logger, logging
 from views.view_factory import ViewFactory, ViewMode
 from views.shared_console_view import SharedConsoleView
 
@@ -101,11 +101,13 @@ def main():
         int: Exit code (0=success, 1=initialization failure, 2=unexpected error)
     """
     args = parse_arguments()
+    
+    # Create logger and set log level
     logger = Logger()
     
-    # Set log level
     if args.verbose:
         logger.set_level("DEBUG")
+        logger.info(f"Log level set to DEBUG")
     
     try:
         # Determine connection mode
@@ -172,7 +174,6 @@ def main():
         logger.info("Client shut down gracefully")
     
     return 0
-
 
 
 if __name__ == "__main__":

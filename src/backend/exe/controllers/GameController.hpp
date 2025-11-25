@@ -43,7 +43,7 @@ class GameController {
      * @param parser Parser type for game notation
      */
     GameController(ParserType parser);
-    
+
     /**
      * @brief Destructor.
      */
@@ -78,7 +78,8 @@ class GameController {
      * @param message Message content
      * @return JSON response (optional)
      */
-    std::optional<std::string> handleMessage(const std::string& session_id, const std::string& message);
+    std::optional<std::string> handleMessage(const std::string& session_id,
+                                             const std::string& message);
 
     /**
      * @brief Handle join_game command.
@@ -144,8 +145,8 @@ class GameController {
     void processFileContent(const std::string& session_id, const std::string& filename,
                             const std::string& data);
 
-    std::unique_ptr<GameContext> game_context_;                         ///< Game state machine
-    std::unordered_map<std::string, FileUploadState> file_uploads_;     ///< File upload tracking
-    std::unique_ptr<IGameParser> parser_;                               ///< Game notation parser
-    Logger& logger_;                                                    ///< Logger instance
+    std::unique_ptr<GameContext> game_context_;                      ///< Game state machine
+    std::unordered_map<std::string, FileUploadState> file_uploads_;  ///< File upload tracking
+    std::unique_ptr<IGameParser> parser_;                            ///< Game notation parser
+    Logger& logger_;                                                 ///< Logger instance
 };

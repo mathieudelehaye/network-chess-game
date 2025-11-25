@@ -60,12 +60,12 @@ class Logger {
      * @brief Return true if current log level is Info
      */
     bool isLevelInfo() { return (logger_->level() == spdlog::level::level_enum::info); }
-    
+
     /**
      * @brief Return true if current log level is Debug
      */
     bool isLevelDebug() { return (logger_->level() == spdlog::level::level_enum::debug); }
-    
+
     /**
      * @brief Return true if current log level is Trace
      */
@@ -90,6 +90,16 @@ class Logger {
      * @brief Destructor
      */
     ~Logger() = default;
+
+    /**
+     * @brief Output stream for logging to the console 
+     */
+    std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> console_sink_;
+
+    /**
+     * @brief Output stream for logging to a file 
+     */
+    std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink_;
 
     std::shared_ptr<spdlog::logger> logger_;
 };
