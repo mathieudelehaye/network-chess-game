@@ -52,7 +52,6 @@ class SharedConsoleView:
             print(f"Move count: {move_count}")
 
         # Don't show the options in GUI mode
-        # TODO: improve integration
         if gui_mode and state_name == "PLAYING":
             return
 
