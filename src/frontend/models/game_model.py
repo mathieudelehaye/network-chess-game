@@ -1,5 +1,5 @@
-"""
-Client-side game model.
+"""Client-side game model for chess application.
+
 Handles game data and data transformation logic.
 State management is handled by ClientContext.
 """
@@ -9,15 +9,11 @@ from typing import Optional
 from utils.logger import Logger
 
 class GameModel:
-    """
-    Model layer - stores game data and provides transformation logic.
+    """Model layer - stores game data and provides transformation logic.
     
-    Responsibilities:
-    1. Store game data (turn tracking, player info)
-    2. Transform server data into human-readable formats
-    
-    State FSM is handled by ClientContext separately.
-    NO parsing or validation - server does that.
+    Singleton class managing game data (turn tracking, player info)
+    and data transformations (move descriptions). State FSM is handled
+    by ClientContext separately. No parsing or validation - server does that.
     """
 
     _instance = None
@@ -57,24 +53,35 @@ class GameModel:
         return self._white_joined and self._black_joined
     
     def set_player_joined(self, color: str):
-        """Track when a player joins"""
+        """Track when a player joins.
+        
+        Args:
+            color: Player color ("white" or "black")
+        """
         if color == "white":
             self._white_joined = True
         elif color == "black":
             self._black_joined = True
     
     def start_game(self):
-        """Initialise game data when game starts"""
+        """Initialize game data when game starts.
+        
+        Sets move count to 1 and turn to white.
+        """
         self._move_count = 1
         self._current_turn = "white"  # White always starts
     
     def update_turn(self, value: Optional[str]):
-        """Update turn after a move"""
+        """Update turn after a move.
+        
+        Args:
+            value: Move number string from server
+        """
         self._move_count = int(value) if value else 0
         self._current_turn = "white" if self._move_count % 2 == 1 else "black"
     
     def reset(self):
-        """Reset all game data"""
+        """Reset all game data to initial state."""
         self._move_count = 1
         self._current_turn = "white"
         self._white_joined = False
@@ -112,7 +119,14 @@ class GameModel:
     
     @staticmethod
     def build_strike_suffix(strike: dict) -> str:
-        """Build check/checkmate/stalemate suffix"""
+        """Build check/checkmate/stalemate suffix.
+        
+        Args:
+            strike: Strike data from server
+            
+        Returns:
+            str: Status suffix (empty, ". Check", ". Checkmate", or ". Stalemate")
+        """
         if strike.get("checkmate"):
             return ". Checkmate"
         elif strike.get("check"):

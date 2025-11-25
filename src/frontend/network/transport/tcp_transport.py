@@ -1,3 +1,9 @@
+"""TCP socket transport implementation.
+
+Provides TCP-based transport using file descriptors with
+threaded reader loop for async message reception.
+"""
+
 import os
 import socket
 import threading
@@ -8,13 +14,17 @@ from utils.logger import Logger
 
 
 class TcpTransport(ITransport):
-    """Class for TCP transport"""
+    """TCP socket transport implementation.
+    
+    Uses os.read/os.write on file descriptor for data transfer.
+    Spawns daemon thread for continuous message reception.
+    """
 
     def __init__(self, socket_fd: int):
-        """
-        Construct a TCP transport with an existing socket.
-
-        @param socket_fd The file descriptor of the connected socket.
+        """Construct TCP transport with existing socket.
+        
+        Args:
+            socket_fd: File descriptor of connected socket
         """
         self.fd = socket_fd
         self.running = False
@@ -22,14 +32,14 @@ class TcpTransport(ITransport):
         self.logger_ = Logger()
 
     def __del__(self):
-        """Destructor ensures that the socket is closed."""
+        """Destructor ensures socket is closed."""
         self.close()
 
     def start(self, on_receive: Callable[[str], None]) -> None:
-        """
-        Start receiving data on the transport.
-
-        @param on_receive Callback function to handle received data.
+        """Start receiving data on the transport.
+        
+        Args:
+            on_receive: Callback function to handle received data
         """
         if self.fd < 0:
             self.logger_.error("Cannot start: not connected")
@@ -66,10 +76,10 @@ class TcpTransport(ITransport):
         self.reader_thread.start()
 
     def send(self, data: str) -> None:
-        """
-        Send data over the transport.
-
-        @param data The data to send.
+        """Send data over the transport.
+        
+        Args:
+            data: String data to send (will be UTF-8 encoded)
         """
         if self.fd < 0:
             self.logger_.error("Cannot send: socket closed")

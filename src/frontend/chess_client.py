@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Chess client for sucden-fin-chess server."""
+"""Chess client application entry point.
+
+Provides command-line interface for connecting to chess server
+using TCP or IPC transport with GUI or console views.
+"""
 
 import argparse
 import sys
@@ -12,7 +16,12 @@ from views.shared_console_view import SharedConsoleView
 
 
 def parse_arguments():
-    """Parse command-line arguments."""
+    """Parse command-line arguments for chess client.
+    
+    Returns:
+        argparse.Namespace: Parsed arguments with transport mode, view mode,
+            connection details, and optional game file path.
+    """
     parser = argparse.ArgumentParser(
         description="Chess client for sucden-fin-chess server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -83,7 +92,14 @@ Examples:
 
 
 def main():
-    """Main entry point"""
+    """Main entry point for chess client application.
+    
+    Initializes views, creates client, and starts interactive or file-based game mode.
+    Handles graceful shutdown on KeyboardInterrupt and exceptions.
+    
+    Returns:
+        int: Exit code (0=success, 1=initialization failure, 2=unexpected error)
+    """
     args = parse_arguments()
     logger = Logger()
     

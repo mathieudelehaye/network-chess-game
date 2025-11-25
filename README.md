@@ -33,6 +33,8 @@ ctest --test-dir build/backend/debug/test --output-on-failure
 
 - To generate the documentation (not auto-generated on every build):
 ```
+cd /path/to/project/root
+
 cmake --build build/backend/debug/ --target docs
 ```
 
@@ -59,7 +61,7 @@ deactivate
 
 - To generate the documentation (not auto-generated on every build):
 ```
-cd doc/frontend
+cd /path/to/project/root/doc/frontend
 
 rm -rf html
 

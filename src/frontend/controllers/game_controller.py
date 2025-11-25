@@ -1,4 +1,8 @@
-"""Game controller - handles user interaction and commands"""
+"""Game controller - handles user interaction and commands.
+
+Manages game flow, user input, and coordination between model,
+context, and views. Supports both interactive and file-based modes.
+"""
 
 import os
 import time
@@ -11,17 +15,20 @@ from views.view_factory import ViewMode
 from views.shared_console_view import SharedConsoleView
 
 class GameController:
-    """
-    Game controller with dual-view support.
-    Uses SharedConsoleView for common I/O and IView for game-specific display.
+    """Game controller with dual-view support.
+    
+    Coordinates game logic, user interaction, and display using
+    SharedConsoleView for common I/O and IView for game-specific display.
+    Manages both interactive and file-based game modes.
     """
     
     def __init__(self, view_mode: ViewMode, game_view: IView, console_view: SharedConsoleView):
-        """
-        Initialise controller with two view objects.
+        """Initialize controller with view objects.
         
-        @param game_view View for game display (NoGUIConsoleView or GuiView)
-        @param console_view Shared console view for common I/O operations
+        Args:
+            view_mode: Display mode (GUI or console)
+            game_view: View for game display (NoGUIConsoleView or GuiView)
+            console_view: Shared console view for common I/O operations
         """
 
         self._context = ClientContext()
@@ -51,11 +58,19 @@ class GameController:
         return self._console_view
         
     def set_session(self, session):
-        """Set session reference for sending messages"""
+        """Set session reference for sending messages.
+        
+        Args:
+            session: ClientSession instance for server communication
+        """
         self._session = session
     
     def run_interactive_mode(self):
-        """Main interactive loop"""
+        """Run main interactive game loop.
+        
+        Displays welcome, waits for connection, shows menu,
+        handles user input, and processes commands until quit.
+        """
         self._logger_.info("Starting interactive mode")
 
         # Show welcome using game view

@@ -1,3 +1,8 @@
+"""Timer utilities for chess game timing.
+
+Provides timestamp formatting functions.
+"""
+
 def format_timestamp(seconds: int) -> str:
     """
     Format seconds into HH:MM:SS format.

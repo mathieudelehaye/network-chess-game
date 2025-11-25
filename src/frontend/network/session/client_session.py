@@ -1,3 +1,8 @@
+"""Client session management.
+
+Handles message framing, buffering, JSON parsing, and routing.
+"""
+
 import json
 import socket
 import threading
@@ -7,9 +12,10 @@ from network.transport.transport_interface import ITransport
 from utils.logger import Logger
 
 class ClientSession:
-    """
-    Client session that owns a transport.
+    """Client session that owns a transport.
+    
     Handles message framing, buffering, and JSON parsing.
+    Routes complete messages to response router.
     """
 
     def __init__(
@@ -20,10 +26,15 @@ class ClientSession:
         _running: bool = False,
         _receive_thread: Optional[threading.Thread] = None,
         _message_handler: Optional[Callable] = None):
-        """
-        Construct a client session.
-
-        @param transport The transport layer to use (ownership transferred)
+        """Construct client session.
+        
+        Args:
+            transport: Transport layer to use (ownership transferred)
+            router: Response router for message handling
+            _socket: Internal use only
+            _running: Internal use only
+            _receive_thread: Internal use only
+            _message_handler: Internal use only
         """
         self.transport = transport
         self.router = router
@@ -35,11 +46,9 @@ class ClientSession:
         self._buffer_lock = threading.Lock()
 
     def start(self) -> None:
-        """
-        Start the session.
-        Spawns the transport's receive thread.
-
-        @param message_handler Callback for incoming messages
+        """Start the session.
+        
+        Spawns transport's receive thread and begins message processing.
         """
         self._active = True
 
@@ -49,11 +58,12 @@ class ClientSession:
         self.logger_.debug("Client session started")
 
     def _on_receive(self, raw: str) -> None:
-        """
-        Handle received data from transport.
+        """Handle received data from transport.
+        
         Buffers incomplete messages and parses complete ones.
-
-        @param raw Raw data received from transport
+        
+        Args:
+            raw: Raw data received from transport
         """
         if not self._active:
             return
@@ -73,10 +83,10 @@ class ClientSession:
                 self._handle_message(message)
 
     def _handle_message(self, reponse: str) -> None:
-        """
-        Parse and handle a complete application message.
-
-        @param json_str Complete message
+        """Parse and handle complete application message.
+        
+        Args:
+            reponse: Complete message string (typo kept for compatibility)
         """
         if not self._active:
             return
@@ -84,11 +94,13 @@ class ClientSession:
         self.router.route(reponse)
 
     def send(self, message: dict) -> bool:
-        """
-        Send a JSON message.
-
-        @param message Dictionary to send as JSON
-        @return True if sent successfully
+        """Send JSON message.
+        
+        Args:
+            message: Dictionary to send as JSON
+            
+        Returns:
+            bool: True if sent successfully
         """
         if not self._active:
             self.logger_.warning("Cannot send - session not active")

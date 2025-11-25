@@ -39,15 +39,20 @@ class NoGUIConsoleView(IView):
         print("="*60 + "\n")
     
     def wait_for_input(self, info: dict) -> tuple[str, ...]:
-        """Get move from user (e.g., 'e2-e4'). Special commands
-        are also allowed, including:
-          - `:r                 => restart (only in single player mode)
-          - `:f <file name>`    => upload game file (only in single player)
-          - `:d`                => display board
-          - `:q`                => quit the game
-
-        @param info dictionary with game info 
-        @return tuple with entered command and parameters
+        """Get move from user (e.g., 'e2-e4').
+        
+        Special commands are also allowed:
+        
+        - :r => restart (only in single player mode)
+        - :f <file name> => upload game file (only in single player)
+        - :d => display board
+        - :q => quit the game
+        
+        Args:
+            info: Dictionary with game info
+            
+        Returns:
+            tuple: Command type and parameters
         """
 
         single_player = info.get('player_number', 1) == 1

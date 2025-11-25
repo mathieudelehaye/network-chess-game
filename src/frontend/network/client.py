@@ -1,3 +1,8 @@
+"""Chess client network connection management.
+
+Handles connection setup, session management, and game mode selection.
+"""
+
 import socket
 from typing import Optional
 from controllers.game_controller import GameController
@@ -11,8 +16,10 @@ from views.view_factory import ViewMode
 from views.view_interface import IView
 
 class Client:
-    """
-    Client that connects to the chess server
+    """Chess client that connects to server.
+    
+    Manages connection lifecycle, session creation, and game mode execution.
+    Supports both TCP and IPC transport with GUI or console views.
     """
 
     def __init__(
@@ -26,6 +33,18 @@ class Client:
         game_view: IView = None,
         console_view: SharedConsoleView = None,
     ):
+        """Initialize chess client.
+        
+        Args:
+            transport_mode: Network protocol (TCP or IPC)
+            view_mode: Display mode (GUI or console)
+            host: Server hostname (TCP mode)
+            port: Server port (TCP mode)
+            socket_path: Unix socket path (IPC mode)
+            game_file: Optional game file for playback mode
+            game_view: Game view instance
+            console_view: Console view instance
+        """
 
         self.transport_mode = transport_mode
         self.view_mode = view_mode
@@ -42,11 +61,14 @@ class Client:
         self.controller: Optional[GameController] = None
 
     def start(self):
-        """
-        Start client - create session and call controller, since the client
-        leads interactions with the server. 
-
-        @param file_name The game file to use (if any).
+        """Start client and begin game.
+        
+        Creates session, controller, and runs appropriate game mode.
+        Executes file-based playback if game_file provided, otherwise
+        starts interactive mode.
+        
+        Raises:
+            RuntimeError: If connection to server fails
         """
         if self.transport_mode == TransportMode.IPC:
             self.logger_.info(f"Connecting to Unix socket: {self.socket_path}")
@@ -85,8 +107,10 @@ class Client:
             self.controller.run_interactive_mode()
 
     def _connect(self) -> bool:
-        """
-        Connect to server and create socket
+        """Connect to server and create socket.
+        
+        Returns:
+            bool: True if connection successful
         """
         try:
             self.logger_.info(f"Connecting to {self.host}:{self.port}...")
@@ -107,7 +131,11 @@ class Client:
             return False
 
     def _connect_tcp(self) -> Optional[socket.socket]:
-        """Create TCP socket and connect"""
+        """Create TCP socket and connect.
+        
+        Returns:
+            socket.socket: Connected socket or None on failure
+        """
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((self.host, self.port))
@@ -118,7 +146,11 @@ class Client:
             return None
 
     def _connect_ipc(self) -> Optional[socket.socket]:
-        """Create Unix domain socket and connect"""
+        """Create Unix domain socket and connect.
+        
+        Returns:
+            socket.socket: Connected socket or None on failure
+        """
         try:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(self.socket_path)
@@ -129,8 +161,9 @@ class Client:
             return None
 
     def stop(self):
-        """
-        Stop client - close session and socket
+        """Stop client and close connections.
+        
+        Closes session and socket gracefully.
         """
         if self.session:
             self.session.close()

@@ -56,9 +56,25 @@ class Logger {
      */
     void critical(const std::string& message);
 
+    /**
+     * @brief Return true if current log level is Info
+     */
     bool isLevelInfo() { return (logger_->level() == spdlog::level::level_enum::info); }
+    
+    /**
+     * @brief Return true if current log level is Debug
+     */
     bool isLevelDebug() { return (logger_->level() == spdlog::level::level_enum::debug); }
+    
+    /**
+     * @brief Return true if current log level is Trace
+     */
     bool isLevelTrace() { return (logger_->level() == spdlog::level::level_enum::trace); }
+
+    /**
+     * @brief Set the log level
+     */
+    void setLogLevel(spdlog::level::level_enum debug_level);
 
     // Delete copy constructor and assignment operator (Singleton)
     Logger(const Logger&) = delete;

@@ -1,11 +1,18 @@
+"""Response router for handling server messages.
+
+Routes incoming JSON messages to appropriate handlers based on type.
+"""
+
 import json
 from utils.logger import Logger
 from views.view_factory import ViewMode
 
 
 class ResponseRouter:
-    """
-    Routes incoming server messages to appropriate handlers.
+    """Routes incoming server messages to appropriate handlers.
+    
+    Parses JSON messages and dispatches to type-specific handler methods.
+    Coordinates updates to context, model, and views based on server responses.
     """
     
     def __init__(
@@ -13,11 +20,11 @@ class ResponseRouter:
         game_controller,
         view_mode: ViewMode,
     ):
-        """
-        Initialise message router.
+        """Initialize message router.
         
         Args:
-            game_controller: Optional reference to GameController for menu refresh
+            game_controller: GameController reference for state access
+            view_mode: Display mode (GUI or console)
         """
 
         self.logger_ = Logger()
@@ -33,7 +40,11 @@ class ResponseRouter:
         self.console_view = game_controller.console_view
     
     def route(self, message: str):
-        """Route incoming server message to appropriate handler"""
+        """Route incoming server message to appropriate handler.
+        
+        Args:
+            message: JSON message string from server
+        """
         
         try:            
             response = json.loads(message)

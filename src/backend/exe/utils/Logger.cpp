@@ -5,7 +5,7 @@
 
 Logger::Logger() {
     // change this with one of the values: `info`, `debug`, `warn`, `err`, `trace`, `critical`
-    const auto debug_level = spdlog::level::trace;
+    const auto debug_level = spdlog::level::info;
 
     // Get executable path
     std::filesystem::path exe_path = std::filesystem::canonical("/proc/self/exe");
@@ -72,4 +72,8 @@ void Logger::error(const std::string& message) {
 
 void Logger::critical(const std::string& msg) {
     logger_->critical(msg);
+}
+
+void Logger::setLogLevel(spdlog::level::level_enum debug_level) {
+    logger_->set_level(debug_level);
 }
