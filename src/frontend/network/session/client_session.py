@@ -11,9 +11,10 @@ from controllers.response_router import ResponseRouter
 from network.transport.transport_interface import ITransport
 from utils.logger import Logger
 
+
 class ClientSession:
     """Client session that owns a transport.
-    
+
     Handles message framing, buffering, and JSON parsing.
     Routes complete messages to response router.
     """
@@ -25,9 +26,10 @@ class ClientSession:
         _socket: Optional[socket.socket] = None,
         _running: bool = False,
         _receive_thread: Optional[threading.Thread] = None,
-        _message_handler: Optional[Callable] = None):
+        _message_handler: Optional[Callable] = None,
+    ):
         """Construct client session.
-        
+
         Args:
             transport: Transport layer to use (ownership transferred)
             router: Response router for message handling
@@ -47,7 +49,7 @@ class ClientSession:
 
     def start(self) -> None:
         """Start the session.
-        
+
         Spawns transport's receive thread and begins message processing.
         """
         self._active = True
@@ -59,9 +61,9 @@ class ClientSession:
 
     def _on_receive(self, raw: str) -> None:
         """Handle received data from transport.
-        
+
         Buffers incomplete messages and parses complete ones.
-        
+
         Args:
             raw: Raw data received from transport
         """
@@ -84,21 +86,21 @@ class ClientSession:
 
     def _handle_message(self, reponse: str) -> None:
         """Parse and handle complete application message.
-        
+
         Args:
             reponse: Complete message string (typo kept for compatibility)
         """
         if not self._active:
             return
-        
+
         self.router.route(reponse)
 
     def send(self, message: dict) -> bool:
         """Send JSON message.
-        
+
         Args:
             message: Dictionary to send as JSON
-            
+
         Returns:
             bool: True if sent successfully
         """

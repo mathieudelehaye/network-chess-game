@@ -11,26 +11,27 @@ from views.view_interface import IView
 
 class ViewMode(Enum):
     """View mode selection for display."""
+
     NOGUI = "no_gui"
     GUI = "gui"
 
 
 class ViewFactory:
     """Factory for creating view instances.
-    
+
     Creates appropriate view based on mode selection.
     """
 
     @staticmethod
     def create(mode: ViewMode) -> IView:
         """Create view instance based on view mode.
-        
+
         Args:
             mode: View mode (NOGUI or GUI)
-            
+
         Returns:
             IView: View instance (GuiView or NoGUIConsoleView)
-            
+
         Raises:
             ValueError: If unsupported view mode provided
         """

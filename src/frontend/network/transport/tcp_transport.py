@@ -15,14 +15,14 @@ from utils.logger import Logger
 
 class TcpTransport(ITransport):
     """TCP socket transport implementation.
-    
+
     Uses os.read/os.write on file descriptor for data transfer.
     Spawns daemon thread for continuous message reception.
     """
 
     def __init__(self, socket_fd: int):
         """Construct TCP transport with existing socket.
-        
+
         Args:
             socket_fd: File descriptor of connected socket
         """
@@ -37,14 +37,14 @@ class TcpTransport(ITransport):
 
     def start(self, on_receive: Callable[[str], None]) -> None:
         """Start receiving data on the transport.
-        
+
         Args:
             on_receive: Callback function to handle received data
         """
         if self.fd < 0:
             self.logger_.error("Cannot start: not connected")
             return
-        
+
         self.running = True
 
         def reader_loop():
@@ -77,7 +77,7 @@ class TcpTransport(ITransport):
 
     def send(self, data: str) -> None:
         """Send data over the transport.
-        
+
         Args:
             data: String data to send (will be UTF-8 encoded)
         """
@@ -91,7 +91,6 @@ class TcpTransport(ITransport):
             self.logger_.error(f"Send error: {e}")
         except Exception as e:
             self.logger_.error(f"Unexpected send error: {e}")
-
 
     def close(self) -> None:
         """Close the TCP socket and terminate the reading loop."""

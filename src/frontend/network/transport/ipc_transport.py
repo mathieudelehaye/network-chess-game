@@ -34,13 +34,13 @@ class IpcTransport(ITransport):
         if self.fd < 0:
             self.logger_.error("Cannot start: invalid file descriptor")
             return
-        
+
         self.running = True
         self.logger_.debug(f"Starting reader thread for Unix socket fd {self.fd}")
 
         def reader_loop():
             self.logger_.debug(f"Reader thread started for Unix socket fd {self.fd}")
-            
+
             while self.running:
                 try:
                     # Read from socket (max 4096 bytes)
@@ -57,14 +57,18 @@ class IpcTransport(ITransport):
 
                 except OSError as e:
                     if self.running:
-                        self.logger_.error(f"Read error on Unix socket fd {self.fd}: {e}")
+                        self.logger_.error(
+                            f"Read error on Unix socket fd {self.fd}: {e}"
+                        )
                     self.running = False
                     break
                 except Exception as e:
-                    self.logger_.error(f"Unexpected read error on Unix socket fd {self.fd}: {e}")
+                    self.logger_.error(
+                        f"Unexpected read error on Unix socket fd {self.fd}: {e}"
+                    )
                     self.running = False
                     break
-            
+
             self.logger_.debug(f"Reader thread EXITING for Unix socket fd {self.fd}")
 
         self.reader_thread = threading.Thread(target=reader_loop, daemon=True)
@@ -89,14 +93,16 @@ class IpcTransport(ITransport):
             self.logger_.error(f"Write error on Unix socket fd {self.fd}: {e}")
             self.running = False
         except Exception as e:
-            self.logger_.error(f"Unexpected send error on Unix socket fd {self.fd}: {e}")
+            self.logger_.error(
+                f"Unexpected send error on Unix socket fd {self.fd}: {e}"
+            )
             self.running = False
 
     def close(self) -> None:
         """Close the Unix socket and terminate the reading loop."""
         if not self.running:
             return
-            
+
         self.running = False
         self.logger_.debug(f"Closing Unix socket transport on fd {self.fd}")
 

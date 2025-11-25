@@ -32,7 +32,7 @@ class Logger:
 
         logging_level = logging.INFO
 
-        # Setup logging. Supported logging levels are: INFO, DEBUG, WARNING, ERROR 
+        # Setup logging. Supported logging levels are: INFO, DEBUG, WARNING, ERROR
         self.logger = logging.getLogger("ChessClient")
         self.logger.setLevel(logging_level)
 
@@ -69,7 +69,7 @@ class Logger:
 
     def debug(self, message: str):
         """Log debug message.
-        
+
         Args:
             message: Debug message to log
         """
@@ -77,7 +77,7 @@ class Logger:
 
     def info(self, message: str):
         """Log informational message.
-        
+
         Args:
             message: Info message to log
         """
@@ -85,7 +85,7 @@ class Logger:
 
     def warning(self, message: str):
         """Log warning message.
-        
+
         Args:
             message: Warning message to log
         """
@@ -93,7 +93,7 @@ class Logger:
 
     def error(self, message: str):
         """Log error message.
-        
+
         Args:
             message: Error message to log
         """
@@ -101,7 +101,7 @@ class Logger:
 
     def critical(self, message: str):
         """Log critical message.
-        
+
         Args:
             message: Critical message to log
         """

@@ -4,6 +4,7 @@ Handles connection setup, session management, and game mode selection.
 """
 
 import socket
+from pathlib import Path
 from typing import Optional
 from controllers.game_controller import GameController
 from controllers.response_router import ResponseRouter
@@ -15,26 +16,27 @@ from views.shared_console_view import SharedConsoleView
 from views.view_factory import ViewMode
 from views.view_interface import IView
 
+
 class Client:
     """Chess client that connects to server.
-    
+
     Manages connection lifecycle, session creation, and game mode execution.
     Supports both TCP and IPC transport with GUI or console views.
     """
 
     def __init__(
         self,
-        transport_mode: TransportMode, 
-        view_mode: ViewMode, 
+        transport_mode: TransportMode,
+        view_mode: ViewMode,
         host: str = "localhost",
         port: int = 2000,
         socket_path: str = "/tmp/chess_server.sock",
-        game_file: Optional[str] = None,
+        game_file: Optional[Path] = None,
         game_view: IView = None,
         console_view: SharedConsoleView = None,
     ):
         """Initialize chess client.
-        
+
         Args:
             transport_mode: Network protocol (TCP or IPC)
             view_mode: Display mode (GUI or console)
@@ -54,19 +56,19 @@ class Client:
         self.game_file = game_file
         self.game_view = game_view
         self.console_view = console_view
-        
-        self.logger_= Logger()
+
+        self.logger_ = Logger()
         self.socket: Optional[socket.socket] = None
         self.session: Optional[ClientSession] = None
         self.controller: Optional[GameController] = None
 
     def start(self):
         """Start client and begin game.
-        
+
         Creates session, controller, and runs appropriate game mode.
         Executes file-based playback if game_file provided, otherwise
         starts interactive mode.
-        
+
         Raises:
             RuntimeError: If connection to server fails
         """
@@ -74,47 +76,44 @@ class Client:
             self.logger_.info(f"Connecting to Unix socket: {self.socket_path}")
         else:
             self.logger_.info(f"Connecting to {self.host}:{self.port}")
-        
+
         # Connect (create socket)
         if not self._connect():
             raise RuntimeError("Failed to connect to server")
-        
+
         # Create transport
         fd = self.socket.fileno()
         transport = TransportFactory.create(fd, self.transport_mode)
 
-        self.controller = GameController(self.view_mode, self.game_view, self.console_view)
+        self.controller = GameController(
+            self.view_mode, self.game_view, self.console_view
+        )
         self.router = ResponseRouter(self.controller, self.view_mode)
 
-        self.session = ClientSession(
-            transport=transport,
-            router=self.router
-        )
+        self.session = ClientSession(transport=transport, router=self.router)
 
         self.controller.set_session(self.session)
 
         # Start session to begin receive loop
         self.session.start()
-        
+
         self.logger_.info(f"Client started on {self.transport_mode.value}")
 
         # Run appropriate mode based on file
-        if self.game_file and self.game_file.strip() != "":
+        if self.game_file:
             self.logger_.info(f"Running file mode: {self.game_file}")
             self.controller.run_file_mode(self.game_file)
-        else:
-            self.logger_.info("Running interactive mode")
-            self.controller.run_interactive_mode()
+        
+        self.logger_.info("Running interactive mode")
+        self.controller.run_interactive_mode()
 
     def _connect(self) -> bool:
         """Connect to server and create socket.
-        
+
         Returns:
             bool: True if connection successful
         """
         try:
-            self.logger_.info(f"Connecting to {self.host}:{self.port}...")
-
             if self.transport_mode == TransportMode.IPC:
                 self.socket = self._connect_ipc()
             else:  # TransportMode.TCP
@@ -132,7 +131,7 @@ class Client:
 
     def _connect_tcp(self) -> Optional[socket.socket]:
         """Create TCP socket and connect.
-        
+
         Returns:
             socket.socket: Connected socket or None on failure
         """
@@ -147,14 +146,16 @@ class Client:
 
     def _connect_ipc(self) -> Optional[socket.socket]:
         """Create Unix domain socket and connect.
-        
+
         Returns:
             socket.socket: Connected socket or None on failure
         """
         try:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(self.socket_path)
-            self.logger_.info(f"Unix socket connected: {self.socket_path} (fd={sock.fileno()})")
+            self.logger_.info(
+                f"Unix socket connected: {self.socket_path} (fd={sock.fileno()})"
+            )
             return sock
         except OSError as e:
             self.logger_.error(f"Unix socket connection failed: {e}")
@@ -162,7 +163,7 @@ class Client:
 
     def stop(self):
         """Stop client and close connections.
-        
+
         Closes session and socket gracefully.
         """
         if self.session:
