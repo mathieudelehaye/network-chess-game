@@ -1,1 +1,1 @@
-Mathieu Delehaye, 2025
+Mathieu Delehaye
