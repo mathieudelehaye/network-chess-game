@@ -91,11 +91,11 @@ Examples:
 def main():
     """Main entry point for chess client application.
 
-    Initializes views, creates client, and starts interactive or file-based game mode.
+    Initialises views, creates client, and starts interactive or file-based game mode.
     Handles graceful shutdown on KeyboardInterrupt and exceptions.
 
     Returns:
-        int: Exit code (0=success, 1=initialization failure, 2=unexpected error)
+        int: Exit code (0=success, 1=initialisation failure, 2=unexpected error)
     """
     args = parse_arguments()
 

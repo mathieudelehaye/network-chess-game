@@ -7,8 +7,8 @@ from network.transport.tcp_transport import TcpTransport
 class TestTcpTransport:
     """Test suite for TcpTransport class."""
 
-    def test_initialization(self):
-        """Test TcpTransport initializes with correct file descriptor."""
+    def test_initialisation(self):
+        """Test TcpTransport initialises with correct file descriptor."""
         transport = TcpTransport(socket_fd=5)
 
         assert transport.fd == 5

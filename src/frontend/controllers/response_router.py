@@ -20,7 +20,7 @@ class ResponseRouter:
         game_controller,
         view_mode: ViewMode,
     ):
-        """Initialize message router.
+        """Initialise message router.
 
         Args:
             game_controller: GameController reference for state access

@@ -35,7 +35,7 @@ class Client:
         game_view: IView = None,
         console_view: SharedConsoleView = None,
     ):
-        """Initialize chess client.
+        """Initialise chess client.
 
         Args:
             transport_mode: Network protocol (TCP or IPC)

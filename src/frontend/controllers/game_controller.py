@@ -26,7 +26,7 @@ class GameController:
     def __init__(
         self, view_mode: ViewMode, game_view: IView, console_view: SharedConsoleView
     ):
-        """Initialize controller with view objects.
+        """Initialise controller with view objects.
 
         Args:
             view_mode: Display mode (GUI or console)
