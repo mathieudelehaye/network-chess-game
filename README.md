@@ -1,5 +1,3 @@
-<div align="center">
-
 # ♟️ Chess Server & Client
 
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/)
@@ -11,13 +9,9 @@
 
 [Features](#-features) • [Architecture](#-architecture) • [Build](#-build-instructions) • [Usage](#-usage) • [Screenshots](#-screenshots) • [Documentation](#-documentation)
 
-</div>
-
 ---
 
 ## 📸 Screenshots
-
-<div align="center">
 
 ### GUI Mode
 ![Text Mode](screenshots/screenshot00.png)
@@ -30,8 +24,6 @@
 ### Game File Playback
 ![File Playback](screenshots/screenshot03.png)
 *Loading and replaying PGN game files*
-
-</div>
 
 ---
 
@@ -377,3 +369,4 @@ This project is licensed under the MIT License.
 
 
 </div>
+
