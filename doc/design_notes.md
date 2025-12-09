@@ -107,7 +107,7 @@ provide complete unit test coverage for the frontend application.
 ## Key Technologies
 
 **Backend:**
-- C++17
+- C++20
 - CMake build system
 - ANTLR 4 for parser generation
 - chess-library for game logic

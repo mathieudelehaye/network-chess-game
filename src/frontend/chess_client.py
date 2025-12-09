@@ -23,7 +23,7 @@ def parse_arguments():
             connection details, and optional game file path.
     """
     parser = argparse.ArgumentParser(
-        description="Chess client for sucden-fin-chess server",
+        description="Chess client for network-chess-game server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

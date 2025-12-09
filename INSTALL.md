@@ -1,6 +1,6 @@
-# sucden-fin-chess
+# network-chess-game
 
-Technical interview for Sucden Financial
+A chess game implementing a TCP client and server network architecture
 
 # Install Project and Dependencies
 
