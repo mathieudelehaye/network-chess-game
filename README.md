@@ -5,7 +5,7 @@
 [![CMake](https://img.shields.io/badge/CMake-3.16+-064F8C.svg)](https://cmake.org/)
 [![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 
-**A professional networked chess application with client-server architecture, multiple transport protocols, and dual notation system support.**
+**A multi-player networked chess application with client-server architecture, multiple transport protocols, and dual notation system support.**
 
 [Features](#-features) • [Architecture](#-architecture) • [Build](#-build-instructions) • [Usage](#-usage) • [Screenshots](#-screenshots) • [Documentation](#-documentation)
 
@@ -369,4 +369,5 @@ This project is licensed under the MIT License.
 
 
 </div>
+
 
