@@ -15,7 +15,7 @@
 
 ### GUI Mode
 ![Text Mode](screenshots/screenshot00.png)
-*Command-line interface with move history and board display*
+*Graphical interface with board display*
 
 ### Multi-Player Game
 ![Multi-Player](screenshots/screenshot02.png)
@@ -369,5 +369,6 @@ This project is licensed under the MIT License.
 
 
 </div>
+
 
 
