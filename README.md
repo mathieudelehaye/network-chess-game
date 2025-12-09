@@ -19,13 +19,9 @@
 
 <div align="center">
 
-### Text Mode Interface
+### GUI Mode
 ![Text Mode](screenshots/screenshot00.png)
 *Command-line interface with move history and board display*
-
-### GUI Mode
-![GUI Mode](screenshots/screenshot01.png)
-*pygame-based graphical interface with interactive board*
 
 ### Multi-Player Game
 ![Multi-Player](screenshots/screenshot02.png)
@@ -378,5 +374,6 @@ This project is licensed under the MIT License.
 <div align="center">
 
 **Built with ♟️ by Mathieu Delehaye, 2025**
+
 
 </div>
